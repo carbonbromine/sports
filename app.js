@@ -25,10 +25,38 @@
     weeklyRing: document.querySelector("#weeklyRing"),
     weeklyPercent: document.querySelector("#weeklyPercent"),
     weeklySummary: document.querySelector("#weeklySummary"),
-    calorieMetric: document.querySelector("#calorieMetric"),
-    durationMetric: document.querySelector("#durationMetric"),
-    barChart: document.querySelector("#barChart"),
-    balanceScore: document.querySelector("#balanceScore"),
+    wearableCard: document.querySelector("#wearableCard"),
+    wearableDateLabel: document.querySelector("#wearableDateLabel"),
+    wearableMode: document.querySelector("#wearableMode"),
+    wearableStatus: document.querySelector("#wearableStatus"),
+    wearableSyncTime: document.querySelector("#wearableSyncTime"),
+    connectHuaweiButton: document.querySelector("#connectHuaweiButton"),
+    syncHuaweiButton: document.querySelector("#syncHuaweiButton"),
+    stepRing: document.querySelector("#stepRing"),
+    stepsMetric: document.querySelector("#stepsMetric"),
+    stepGoal: document.querySelector("#stepGoal"),
+    distanceMetric: document.querySelector("#distanceMetric"),
+    activeCaloriesMetric: document.querySelector("#activeCaloriesMetric"),
+    activeMinutesMetric: document.querySelector("#activeMinutesMetric"),
+    heartRateMetric: document.querySelector("#heartRateMetric"),
+    heartRateRange: document.querySelector("#heartRateRange"),
+    heartRateChart: document.querySelector("#heartRateChart"),
+    heartLine: document.querySelector("#heartLine"),
+    heartArea: document.querySelector("#heartArea"),
+    restingHeartRate: document.querySelector("#restingHeartRate"),
+    heartUpdatedAt: document.querySelector("#heartUpdatedAt"),
+    sleepDurationMetric: document.querySelector("#sleepDurationMetric"),
+    sleepScoreMetric: document.querySelector("#sleepScoreMetric"),
+    sleepTimeline: document.querySelector("#sleepTimeline"),
+    deepSleepMetric: document.querySelector("#deepSleepMetric"),
+    lightSleepMetric: document.querySelector("#lightSleepMetric"),
+    remSleepMetric: document.querySelector("#remSleepMetric"),
+    awakeMetric: document.querySelector("#awakeMetric"),
+    spo2Metric: document.querySelector("#spo2Metric"),
+    spo2UpdatedAt: document.querySelector("#spo2UpdatedAt"),
+    stressMetric: document.querySelector("#stressMetric"),
+    stressUpdatedAt: document.querySelector("#stressUpdatedAt"),
+    wearableWorkoutList: document.querySelector("#wearableWorkoutList"),
     streakWeek: document.querySelector("#streakWeek"),
     reminderStatus: document.querySelector("#reminderStatus"),
     reminderToggle: document.querySelector("#reminderToggle"),
@@ -42,6 +70,7 @@
     selectedFileName: document.querySelector("#selectedFileName"),
     importSubmitButton: document.querySelector("#importSubmitButton"),
     importError: document.querySelector("#importError"),
+    deviceDialog: document.querySelector("#deviceDialog"),
     confirmDialog: document.querySelector("#confirmDialog"),
     confirmResetButton: document.querySelector("#confirmResetButton"),
     toast: document.querySelector("#toast"),
@@ -55,6 +84,7 @@
   let installPrompt = null;
   let toastTimer = 0;
   let reminderTimer = 0;
+  let wearableSnapshot = window.RhythmHuaweiHealth?.demoSnapshot() || null;
 
   function pad(value) {
     return String(value).padStart(2, "0");
@@ -371,46 +401,131 @@
     refreshIcons(els.planList);
   }
 
-  function completedExerciseBetween(start, end) {
-    return state.tasks.filter(
-      (task) => task.type === "exercise" && task.done && task.date >= start && task.date <= end
+  function formatSyncTime(value) {
+    if (!value) return "等待同步";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "等待同步";
+    return `${pad(date.getHours())}:${pad(date.getMinutes())} 更新`;
+  }
+
+  function formatMinutes(value) {
+    const minutes = Math.max(0, Number(value) || 0);
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    if (!hours) return `${remainder}分`;
+    return remainder ? `${hours}时${remainder}分` : `${hours}小时`;
+  }
+
+  function formatWorkoutDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "最近";
+    const key = toDateKey(date);
+    return formatDateLabel(key, true);
+  }
+
+  function renderHeartChart(samples) {
+    if (!Array.isArray(samples) || samples.length < 2) {
+      els.heartLine.setAttribute("points", "");
+      els.heartArea.setAttribute("d", "");
+      return;
+    }
+
+    const width = 340;
+    const height = 106;
+    const minValue = Math.min(45, ...samples);
+    const maxValue = Math.max(135, ...samples);
+    const range = Math.max(1, maxValue - minValue);
+    const points = samples.map((sample, index) => {
+      const x = (index / (samples.length - 1)) * width;
+      const y = height - ((sample - minValue) / range) * (height - 14) - 7;
+      return [x, y];
+    });
+    const pointString = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    els.heartLine.setAttribute("points", pointString);
+    els.heartArea.setAttribute(
+      "d",
+      `M ${points[0][0].toFixed(1)} ${height} L ${pointString.replaceAll(",", " ")} L ${points[points.length - 1][0].toFixed(1)} ${height} Z`
     );
   }
 
   function renderInsights() {
-    const end = todayKey();
-    const start = offsetDate(end, -6);
-    const exercises = completedExerciseBetween(start, end);
-    const calories = exercises.reduce((sum, task) => sum + Number(task.calories || 0), 0);
-    const duration = exercises.reduce((sum, task) => sum + Number(task.duration || 0), 0);
-    const mealTasks = state.tasks.filter(
-      (task) => task.type === "meal" && task.done && task.date >= start && task.date <= end
-    );
-    const totalWeekTasks = state.tasks.filter((task) => task.date >= start && task.date <= end);
-    const completedWeekTasks = totalWeekTasks.filter((task) => task.done);
-    const completion = totalWeekTasks.length ? completedWeekTasks.length / totalWeekTasks.length : 0;
-    const variety = exercises.length && mealTasks.length ? 8 : 0;
-    const score = Math.min(98, Math.round(58 + completion * 32 + variety));
+    const snapshot = wearableSnapshot || window.RhythmHuaweiHealth.demoSnapshot();
+    const device = snapshot.device || {};
+    const activity = snapshot.activity || {};
+    const heartRate = snapshot.heartRate || {};
+    const sleep = snapshot.sleep || {};
+    const spo2 = snapshot.spo2 || {};
+    const stress = snapshot.stress || {};
+    const isLive = snapshot.mode === "live" && device.connected;
+    const steps = Number(activity.steps || 0);
+    const stepGoal = Math.max(1, Number(activity.stepGoal || 10000));
+    const stepPercent = Math.min(100, Math.round((steps / stepGoal) * 100));
 
-    els.calorieMetric.textContent = calories.toLocaleString("zh-CN");
-    els.durationMetric.textContent = duration.toLocaleString("zh-CN");
-    els.balanceScore.textContent = String(score);
+    els.wearableDateLabel.textContent = formatDateLabel(todayKey());
+    els.wearableMode.textContent = isLive ? "已连接" : "演示数据";
+    els.wearableMode.classList.toggle("is-live", isLive);
+    els.wearableStatus.textContent = isLive ? `${device.name || "HUAWEI Band 6"} 已同步` : "通过 HUAWEI Health 同步";
+    els.wearableSyncTime.textContent = isLive ? formatSyncTime(device.updatedAt) : "接入 Health Service Kit 后获取真实数据";
+    els.connectHuaweiButton.querySelector("span").textContent = isLive ? "已连接" : "连接";
+    els.wearableCard.classList.toggle("is-connected", isLive);
 
-    const chartDays = Array.from({ length: 7 }, (_, index) => offsetDate(end, index - 6));
-    els.barChart.innerHTML = chartDays
-      .map((key) => {
-        const tasks = state.tasks.filter((task) => task.date === key);
-        const done = tasks.filter((task) => task.done).length;
-        const value = tasks.length ? Math.max(8, Math.round((done / tasks.length) * 100)) : 4;
-        const date = dateFromKey(key);
-        return `
-          <div class="bar-column${key === todayKey() ? " is-today" : ""}" title="${formatDateLabel(key)}：${done}/${tasks.length}">
-            <div class="bar-track"><span class="bar-fill" style="height:${value}%"></span></div>
-            <span>${WEEKDAYS[date.getDay()]}</span>
-          </div>
-        `;
-      })
+    els.stepsMetric.textContent = steps.toLocaleString("zh-CN");
+    els.stepGoal.textContent = stepGoal.toLocaleString("zh-CN");
+    els.stepRing.style.setProperty("--step-progress", `${stepPercent * 3.6}deg`);
+    els.distanceMetric.textContent = Number(activity.distanceKm || 0).toFixed(1);
+    els.activeCaloriesMetric.textContent = Number(activity.caloriesKcal || 0).toLocaleString("zh-CN");
+    els.activeMinutesMetric.textContent = Number(activity.activeMinutes || 0).toLocaleString("zh-CN");
+
+    els.heartRateMetric.textContent = heartRate.latest ?? "--";
+    els.heartRateRange.textContent = heartRate.min && heartRate.max ? `${heartRate.min}-${heartRate.max} bpm` : "暂无区间";
+    els.restingHeartRate.textContent = heartRate.resting ? `${heartRate.resting} bpm` : "--";
+    els.heartUpdatedAt.textContent = formatSyncTime(heartRate.updatedAt);
+    renderHeartChart(heartRate.samples);
+
+    els.sleepDurationMetric.textContent = formatMinutes(sleep.totalMinutes);
+    els.sleepScoreMetric.textContent = sleep.score ?? "--";
+    els.deepSleepMetric.textContent = formatMinutes(sleep.deepMinutes);
+    els.lightSleepMetric.textContent = formatMinutes(sleep.lightMinutes);
+    els.remSleepMetric.textContent = formatMinutes(sleep.remMinutes);
+    els.awakeMetric.textContent = formatMinutes(sleep.awakeMinutes);
+    const stageTotal = Math.max(1, (sleep.stages || []).reduce((sum, stage) => sum + Number(stage.minutes || 0), 0));
+    els.sleepTimeline.innerHTML = (sleep.stages || [])
+      .map((stage) => `<span class="sleep-segment ${escapeHTML(stage.type)}" style="width:${(Number(stage.minutes || 0) / stageTotal) * 100}%"></span>`)
       .join("");
+
+    els.spo2Metric.textContent = spo2.latest ?? "--";
+    els.spo2UpdatedAt.textContent = spo2.min ? `今日最低 ${spo2.min}% · ${formatSyncTime(spo2.updatedAt)}` : "等待同步";
+    els.stressMetric.textContent = stress.latest ?? "--";
+    els.stressUpdatedAt.textContent = formatSyncTime(stress.updatedAt);
+
+    const workouts = Array.isArray(snapshot.workouts) ? snapshot.workouts : [];
+    els.wearableWorkoutList.innerHTML = workouts.length
+      ? workouts.map((workout) => {
+        const isStrength = workout.type === "strength";
+        const metric = Number(workout.distanceKm) > 0
+          ? `<strong>${Number(workout.distanceKm).toFixed(1)} km</strong><span>${workout.caloriesKcal || 0} kcal</span>`
+          : `<strong>${workout.caloriesKcal || 0} kcal</strong><span>平均 ${workout.averageHeartRate || "--"} bpm</span>`;
+        return `
+          <article class="workout-row">
+            <span class="workout-icon${isStrength ? " coral" : ""}">
+              <i data-lucide="${isStrength ? "dumbbell" : "footprints"}"></i>
+            </span>
+            <div class="workout-copy">
+              <strong>${escapeHTML(workout.title || "锻炼记录")}</strong>
+              <span>${formatWorkoutDate(workout.startTime)} · ${formatMinutes(workout.durationMinutes)} · 平均 ${workout.averageHeartRate || "--"} bpm</span>
+            </div>
+            <div class="workout-value">${metric}</div>
+          </article>
+        `;
+      }).join("")
+      : `
+        <div class="empty-state">
+          <span><i data-lucide="activity"></i></span>
+          <h3>暂无锻炼记录</h3>
+          <p>手环数据同步到 HUAWEI Health 后会显示在这里。</p>
+        </div>
+      `;
+    refreshIcons(els.wearableWorkoutList);
   }
 
   function renderStreak() {
@@ -864,6 +979,61 @@
     showToast("请使用浏览器菜单中的“添加到主屏幕”", "smartphone");
   }
 
+  async function connectHuaweiHealth() {
+    const provider = window.RhythmHuaweiHealth;
+    if (!provider) {
+      showToast("健康数据模块加载失败", "circle-alert");
+      return;
+    }
+
+    try {
+      const status = await provider.getStatus();
+      if (!status.available) {
+        els.deviceDialog.showModal();
+        return;
+      }
+
+      const authorization = status.authorized ? status : await provider.connect();
+      if (!authorization.authorized) {
+        showToast("未获得健康数据授权", "circle-alert");
+        return;
+      }
+
+      wearableSnapshot = await provider.sync();
+      renderInsights();
+      showToast("HUAWEI Health 已连接", "link-2");
+    } catch (error) {
+      console.warn("Unable to connect HUAWEI Health.", error);
+      showToast("连接失败，请检查授权状态", "circle-alert");
+    }
+  }
+
+  async function syncHuaweiHealth() {
+    const provider = window.RhythmHuaweiHealth;
+    els.syncHuaweiButton.classList.add("is-syncing");
+    els.syncHuaweiButton.disabled = true;
+
+    try {
+      const status = await provider?.getStatus();
+      if (!status?.available || !status.authorized) {
+        wearableSnapshot = provider?.demoSnapshot() || wearableSnapshot;
+        renderInsights();
+        showToast("已刷新演示数据", "refresh-cw");
+        return;
+      }
+
+      wearableSnapshot = await provider.sync();
+      renderInsights();
+      showToast("手环数据已同步", "refresh-cw");
+    } catch (error) {
+      console.warn("Unable to synchronize health data.", error);
+      showToast("同步失败，请稍后重试", "circle-alert");
+    } finally {
+      els.syncHuaweiButton.classList.remove("is-syncing");
+      els.syncHuaweiButton.disabled = false;
+    }
+  }
+
   function bindEvents() {
     document.querySelector(".bottom-nav").addEventListener("click", (event) => {
       const button = event.target.closest(".nav-item");
@@ -905,7 +1075,7 @@
       button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close());
     });
 
-    [els.addDialog, els.importDialog, els.confirmDialog].forEach((dialog) => {
+    [els.addDialog, els.importDialog, els.deviceDialog, els.confirmDialog].forEach((dialog) => {
       dialog.addEventListener("click", (event) => {
         if (event.target === dialog) dialog.close();
       });
@@ -957,6 +1127,8 @@
     document.querySelector("#downloadTemplateButton").addEventListener("click", downloadTemplate);
     els.notificationButton.addEventListener("click", toggleReminders);
     document.querySelector("#reminderSettingsButton").addEventListener("click", toggleReminders);
+    els.connectHuaweiButton.addEventListener("click", connectHuaweiHealth);
+    els.syncHuaweiButton.addEventListener("click", syncHuaweiHealth);
 
     document.addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;

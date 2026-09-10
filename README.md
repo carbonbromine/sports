@@ -46,6 +46,11 @@ dist/rhythm-health-debug.apk
 
 JSON 可直接传入计划数组，也可使用 `{ "plans": [...] }` 或 `{ "tasks": [...] }`。
 
+## HUAWEI Band 6
+
+数据接入结论、权限范围、界面映射和原生桥接契约见
+[HUAWEI Band 6 数据接入设计](docs/huawei-band-6-integration.md)。
+
 ## 提醒说明
 
 浏览器授权后，应用会通过系统通知提醒当前计划。Web 平台无法保证应用被操作系统彻底终止后仍准时唤醒；生产版若需要严格的后台本地提醒，应使用 Capacitor 等原生容器接入 iOS/Android 本地通知。

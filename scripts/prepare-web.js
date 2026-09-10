@@ -7,6 +7,7 @@ const entries = [
   "index.html",
   "styles.css",
   "app.js",
+  "huawei-health.js",
   "manifest.webmanifest",
   "service-worker.js",
   "assets",

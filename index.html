@@ -94,54 +94,142 @@
         <section class="view" id="insightsView" data-view="insights" aria-labelledby="insightsLabel">
           <div class="page-intro insights-intro">
             <div>
-              <p class="section-kicker">本周回顾</p>
-              <h2>身体数据</h2>
-              <p class="muted">9月 7日 - 9月 13日</p>
+              <p class="section-kicker">健康数据</p>
+              <h2>身体状态</h2>
+              <p class="muted" id="wearableDateLabel">今天</p>
             </div>
             <button class="icon-button" type="button" aria-label="分享数据" data-action="share">
               <i data-lucide="share-2"></i>
             </button>
           </div>
 
-          <div class="metric-grid">
-            <article class="metric-card metric-card-dark">
-              <span class="metric-icon"><i data-lucide="flame"></i></span>
-              <p>活动消耗</p>
-              <strong id="calorieMetric">0</strong>
-              <span>千卡</span>
+          <article class="wearable-card" id="wearableCard">
+            <span class="wearable-icon"><i data-lucide="watch"></i></span>
+            <div class="wearable-copy">
+              <div class="wearable-name-row">
+                <h3>HUAWEI Band 6</h3>
+                <span class="demo-badge" id="wearableMode">演示数据</span>
+              </div>
+              <p id="wearableStatus">通过 HUAWEI Health 同步</p>
+              <small id="wearableSyncTime">尚未连接</small>
+            </div>
+            <button class="device-action-button" id="connectHuaweiButton" type="button">
+              <i data-lucide="link-2"></i>
+              <span>连接</span>
+            </button>
+          </article>
+
+          <article class="activity-section health-data-card">
+            <div class="health-card-heading">
+              <div>
+                <p class="section-kicker">日常活动</p>
+                <h3>今天的活动量</h3>
+              </div>
+              <button class="sync-button" id="syncHuaweiButton" type="button" aria-label="同步健康数据">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="activity-layout">
+              <div class="step-ring" id="stepRing">
+                <div>
+                  <strong id="stepsMetric">0</strong>
+                  <span>步 / <b id="stepGoal">0</b></span>
+                </div>
+              </div>
+              <div class="activity-metrics">
+                <div>
+                  <i data-lucide="route"></i>
+                  <span>距离</span>
+                  <strong><b id="distanceMetric">0</b> km</strong>
+                </div>
+                <div>
+                  <i data-lucide="flame"></i>
+                  <span>消耗</span>
+                  <strong><b id="activeCaloriesMetric">0</b> kcal</strong>
+                </div>
+                <div>
+                  <i data-lucide="timer"></i>
+                  <span>中高强度</span>
+                  <strong><b id="activeMinutesMetric">0</b> min</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="heart-section health-data-card">
+            <div class="health-card-heading">
+              <div>
+                <p class="section-kicker">全天心率</p>
+                <h3><strong id="heartRateMetric">--</strong> <small>bpm</small></h3>
+              </div>
+              <span class="health-range" id="heartRateRange">--</span>
+            </div>
+            <div class="heart-chart-wrap" aria-label="今日心率变化">
+              <svg class="heart-chart" id="heartRateChart" viewBox="0 0 340 112" preserveAspectRatio="none" role="img" aria-label="心率趋势图">
+                <line x1="0" y1="27" x2="340" y2="27"></line>
+                <line x1="0" y1="79" x2="340" y2="79"></line>
+                <path id="heartArea" d=""></path>
+                <polyline id="heartLine" points=""></polyline>
+              </svg>
+              <div class="chart-axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>现在</span></div>
+            </div>
+            <div class="heart-footer">
+              <span><i data-lucide="heart-pulse"></i> 静息心率 <b id="restingHeartRate">-- bpm</b></span>
+              <span id="heartUpdatedAt">等待同步</span>
+            </div>
+          </article>
+
+          <article class="sleep-section health-data-card">
+            <div class="health-card-heading">
+              <div>
+                <p class="section-kicker">昨夜睡眠</p>
+                <h3><strong id="sleepDurationMetric">--</strong></h3>
+              </div>
+              <div class="sleep-score">
+                <strong id="sleepScoreMetric">--</strong>
+                <span>睡眠分</span>
+              </div>
+            </div>
+            <div class="sleep-timeline" id="sleepTimeline" aria-label="睡眠阶段分布"></div>
+            <div class="sleep-legend">
+              <span><i class="stage-dot deep"></i>深睡 <b id="deepSleepMetric">--</b></span>
+              <span><i class="stage-dot light"></i>浅睡 <b id="lightSleepMetric">--</b></span>
+              <span><i class="stage-dot rem"></i>快速眼动 <b id="remSleepMetric">--</b></span>
+              <span><i class="stage-dot awake"></i>清醒 <b id="awakeMetric">--</b></span>
+            </div>
+          </article>
+
+          <div class="vitals-grid">
+            <article class="vital-card">
+              <div class="vital-card-top">
+                <span class="metric-icon blue"><i data-lucide="droplets"></i></span>
+                <span class="normal-badge">正常</span>
+              </div>
+              <p>血氧饱和度</p>
+              <strong><b id="spo2Metric">--</b><small>%</small></strong>
+              <span id="spo2UpdatedAt">等待同步</span>
             </article>
-            <article class="metric-card">
-              <span class="metric-icon coral"><i data-lucide="timer"></i></span>
-              <p>运动时长</p>
-              <strong id="durationMetric">0</strong>
-              <span>分钟</span>
+            <article class="vital-card">
+              <div class="vital-card-top">
+                <span class="metric-icon yellow"><i data-lucide="brain"></i></span>
+                <span class="normal-badge calm">放松</span>
+              </div>
+              <p>压力</p>
+              <strong><b id="stressMetric">--</b><small>/100</small></strong>
+              <span id="stressUpdatedAt">等待同步</span>
             </article>
           </div>
 
-          <article class="chart-section">
-            <div class="chart-heading">
+          <section class="workout-section">
+            <div class="section-heading compact-heading">
               <div>
-                <p class="section-kicker">完成趋势</p>
-                <h3>近 7 天活跃度</h3>
+                <p class="section-kicker">锻炼记录</p>
+                <h2>最近运动</h2>
               </div>
-              <span class="trend-badge"><i data-lucide="trending-up"></i> 12%</span>
+              <span class="source-label">来自手环</span>
             </div>
-            <div class="bar-chart" id="barChart" aria-label="近七天计划完成趋势"></div>
-          </article>
-
-          <article class="balance-section">
-            <div class="balance-visual">
-              <div class="balance-ring">
-                <strong id="balanceScore">86</strong>
-                <span>平衡分</span>
-              </div>
-            </div>
-            <div class="balance-copy">
-              <p class="section-kicker">健康平衡</p>
-              <h3>饮食与运动配合得不错</h3>
-              <p>蛋白质摄入稳定，再增加一次低强度有氧会更理想。</p>
-            </div>
-          </article>
+            <div class="workout-list" id="wearableWorkoutList"></div>
+          </section>
         </section>
 
         <section class="view" id="profileView" data-view="profile" aria-labelledby="profileLabel">
@@ -347,12 +435,50 @@
       </form>
     </dialog>
 
+    <dialog class="device-dialog" id="deviceDialog">
+      <div class="device-sheet">
+        <div class="sheet-header">
+          <div>
+            <p class="section-kicker">设备数据源</p>
+            <h2>连接 HUAWEI Health</h2>
+          </div>
+          <button class="icon-button sheet-close" type="button" data-close="deviceDialog" aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="connection-route">
+          <span><i data-lucide="watch"></i><b>Band 6</b></span>
+          <i data-lucide="arrow-right"></i>
+          <span><i data-lucide="heart-pulse"></i><b>HUAWEI Health</b></span>
+          <i data-lucide="arrow-right"></i>
+          <span><i data-lucide="smartphone"></i><b>律动</b></span>
+        </div>
+        <div class="connection-notice">
+          <i data-lucide="shield-check"></i>
+          <div>
+            <strong>当前展示演示数据</strong>
+            <p>正式连接需要在华为开发者后台申请 Health Service Kit，并由用户逐项授权健康数据。</p>
+          </div>
+        </div>
+        <div class="scope-preview">
+          <span><i data-lucide="footprints"></i> 活动</span>
+          <span><i data-lucide="heart-pulse"></i> 心率</span>
+          <span><i data-lucide="moon"></i> 睡眠</span>
+          <span><i data-lucide="droplets"></i> 血氧</span>
+          <span><i data-lucide="brain"></i> 压力</span>
+          <span><i data-lucide="activity"></i> 锻炼</span>
+        </div>
+        <button class="primary-button full-width" type="button" data-close="deviceDialog">知道了</button>
+      </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite">
       <i data-lucide="circle-check"></i>
       <span id="toastMessage"></span>
     </div>
 
     <script src="./vendor/lucide.min.js"></script>
+    <script src="./huawei-health.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
