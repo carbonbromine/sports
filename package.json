@@ -5,7 +5,7 @@
   "description": "Mobile health plan PWA packaged for Android with Capacitor.",
   "scripts": {
     "prepare:web": "node scripts/prepare-web.js",
-    "android:sync": "npm run prepare:web && cap sync android",
+    "android:sync": "npm run prepare:web && cap sync android && node scripts/prepare-android.js",
     "build:apk": "bash ./build-apk.sh"
   },
   "dependencies": {

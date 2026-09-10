@@ -271,6 +271,9 @@ prepare_project() {
   log "Synchronizing Capacitor"
   npx --no-install cap sync android
 
+  log "Applying Android home widget"
+  node scripts/prepare-android.js
+
   printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > android/local.properties
   chmod +x android/gradlew
 }

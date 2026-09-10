@@ -654,6 +654,28 @@
       .sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
   }
 
+  function syncHomeWidget(netCalories) {
+    const widget = window.RhythmHomeWidget;
+    if (!widget) return;
+    const nextTask = sortTasks(state.tasks)
+      .find((task) => !task.done && task.date >= todayKey());
+    const now = new Date();
+
+    widget.update({
+      steps: Math.round(Number(wearableSnapshot?.activity?.steps || 0)),
+      stepGoal: Math.round(Number(wearableSnapshot?.activity?.stepGoal || 10000)),
+      heartRate: Math.round(Number(wearableSnapshot?.heartRate?.latest || 0)),
+      sleepMinutes: Math.round(Number(wearableSnapshot?.sleep?.totalMinutes || 0)),
+      netCalories: Math.round(netCalories),
+      nextPlan: nextTask?.title || "今天暂无后续计划",
+      nextPlanTime: nextTask ? `${formatDateLabel(nextTask.date, true)} ${nextTask.time}` : "",
+      source: wearableSnapshot?.mode === "live" ? "HUAWEI Health" : "演示数据",
+      updatedAt: `${pad(now.getHours())}:${pad(now.getMinutes())}`
+    }).catch((error) => {
+      console.warn("Unable to update Android home widget.", error);
+    });
+  }
+
   function renderCalorieSummary() {
     const entries = todayCalorieEntries();
     const intake = entries
@@ -700,6 +722,7 @@
         </div>
       `;
     refreshIcons(els.calorieLedger);
+    syncHomeWidget(net);
   }
 
   function renderFoodEstimate() {
@@ -1376,6 +1399,20 @@
     showToast("请使用浏览器菜单中的“添加到主屏幕”", "smartphone");
   }
 
+  async function installHomeWidget() {
+    try {
+      const result = await window.RhythmHomeWidget?.requestPin();
+      if (result?.requested) {
+        showToast("已请求添加桌面健康卡片", "panels-top-left");
+        return;
+      }
+      showToast("请在桌面双指捏合，进入卡片 > 经典小组件添加律动", "panels-top-left");
+    } catch (error) {
+      console.warn("Unable to request the Android home widget.", error);
+      showToast("请从桌面卡片的经典小组件中添加律动", "panels-top-left");
+    }
+  }
+
   async function connectHuaweiHealth() {
     const provider = window.RhythmHuaweiHealth;
     if (!provider) {
@@ -1398,6 +1435,7 @@
 
       wearableSnapshot = await provider.sync();
       renderInsights();
+      renderCalorieSummary();
       showToast("HUAWEI Health 已连接", "link-2");
     } catch (error) {
       console.warn("Unable to connect HUAWEI Health.", error);
@@ -1415,12 +1453,14 @@
       if (!status?.available || !status.authorized) {
         wearableSnapshot = provider?.demoSnapshot() || wearableSnapshot;
         renderInsights();
+        renderCalorieSummary();
         showToast("已刷新演示数据", "refresh-cw");
         return;
       }
 
       wearableSnapshot = await provider.sync();
       renderInsights();
+      renderCalorieSummary();
       showToast("手环数据已同步", "refresh-cw");
     } catch (error) {
       console.warn("Unable to synchronize health data.", error);
@@ -1569,6 +1609,7 @@
       if (action === "export") exportPlans();
       if (action === "share") shareSummary();
       if (action === "install") installApp();
+      if (action === "widget") installHomeWidget();
       if (action === "reset") els.confirmDialog.showModal();
     });
 

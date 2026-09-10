@@ -9,6 +9,7 @@ const entries = [
   "app.js",
   "huawei-health.js",
   "nutrition-estimator.js",
+  "home-widget.js",
   "manifest.webmanifest",
   "service-worker.js",
   "assets",

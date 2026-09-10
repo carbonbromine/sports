@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_title">今日健康</string>
+    <string name="widget_description">展示步数、心率、睡眠、热量和下一项计划</string>
+    <string name="widget_source">律动</string>
+    <string name="widget_waiting">等待 App 同步</string>
+    <string name="widget_steps_label">今日步数</string>
+    <string name="widget_step_goal">/ 10,000 步</string>
+    <string name="widget_heart_label">心率</string>
+    <string name="widget_sleep_label">睡眠</string>
+    <string name="widget_calorie_label">热量结余</string>
+    <string name="widget_no_plan">打开律动安排今日计划</string>
+</resources>

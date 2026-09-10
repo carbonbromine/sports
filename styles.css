@@ -2254,6 +2254,11 @@ label:focus-within {
   background: var(--blue-soft);
 }
 
+.settings-icon.yellow {
+  color: #80651b;
+  background: var(--yellow-soft);
+}
+
 .settings-icon.red {
   color: var(--red);
   background: var(--red-soft);
