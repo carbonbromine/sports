@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_plan_title">今日计划</string>
+    <string name="widget_plan_description">展示今日进度和下一项计划</string>
+    <string name="widget_plan_empty">暂无待办计划</string>
+    <string name="widget_plan_hint">点击打开律动安排计划</string>
+</resources>

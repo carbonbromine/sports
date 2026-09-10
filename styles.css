@@ -1082,6 +1082,12 @@ label:focus-within {
   margin-top: 24px;
 }
 
+.plan-tools {
+  margin: 18px 0 20px;
+  padding: 0 2px;
+  border-top: 1px solid var(--line);
+}
+
 .settings-group > h3 {
   margin: 0 0 8px;
   font-size: 13px;
@@ -1195,7 +1201,7 @@ label:focus-within {
   left: max(0px, calc((100vw - 460px) / 2));
   display: grid;
   height: calc(76px + var(--safe-bottom));
-  grid-template-columns: 1fr 1fr 66px 1fr 1fr;
+  grid-template-columns: 1fr 66px 1fr;
   align-items: start;
   padding: 8px 12px var(--safe-bottom);
   border-top: 1px solid rgba(221, 226, 221, 0.92);

@@ -4,7 +4,6 @@
   const STORAGE_KEY = "rhythm-health-state-v1";
   const NOTIFIED_KEY = "rhythm-health-notified-v1";
   const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
-  const DAY_MS = 24 * 60 * 60 * 1000;
   const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
   const FULL_WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -25,11 +24,6 @@
     weeklyRing: document.querySelector("#weeklyRing"),
     weeklyPercent: document.querySelector("#weeklyPercent"),
     weeklySummary: document.querySelector("#weeklySummary"),
-    calorieMetric: document.querySelector("#calorieMetric"),
-    durationMetric: document.querySelector("#durationMetric"),
-    barChart: document.querySelector("#barChart"),
-    balanceScore: document.querySelector("#balanceScore"),
-    streakWeek: document.querySelector("#streakWeek"),
     reminderStatus: document.querySelector("#reminderStatus"),
     reminderToggle: document.querySelector("#reminderToggle"),
     addDialog: document.querySelector("#addDialog"),
@@ -52,7 +46,6 @@
   let selectedDate = todayKey();
   let activeFilter = "all";
   let selectedFile = null;
-  let installPrompt = null;
   let toastTimer = 0;
   let reminderTimer = 0;
 
@@ -92,90 +85,7 @@
   }
 
   function createDefaultTasks() {
-    const today = todayKey();
-    const exerciseNames = ["轻松慢跑", "核心激活", "下肢力量", "舒展瑜伽", "间歇快走", "上肢力量", "户外骑行"];
-    const mealNames = ["燕麦坚果早餐", "鸡胸肉能量碗", "杂粮轻食午餐", "牛油果全麦吐司", "三文鱼蔬菜餐", "酸奶水果杯", "菌菇豆腐晚餐"];
-    const tasks = [];
-
-    for (let offset = -6; offset <= 6; offset += 1) {
-      const date = offsetDate(today, offset);
-      const index = ((dateFromKey(date).getDay() + 6) % 7);
-      const isPast = offset < 0;
-      const completionGate = Math.abs(offset) % 4;
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "07:30",
-        type: "exercise",
-        title: exerciseNames[index],
-        duration: 35 + (index % 3) * 5,
-        calories: 220 + index * 18,
-        reminder: 15,
-        note: "保持可顺畅说话的呼吸节奏",
-        done: isPast && completionGate !== 0,
-        source: "示例计划"
-      });
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "08:25",
-        type: "meal",
-        title: mealNames[index],
-        duration: 20,
-        calories: 420 + index * 16,
-        reminder: 5,
-        note: "注意补充水分与优质蛋白",
-        done: isPast || offset === 0,
-        source: "示例计划"
-      });
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "12:30",
-        type: "meal",
-        title: index % 2 ? "彩虹蔬菜午餐" : "低脂高蛋白午餐",
-        duration: 25,
-        calories: 560,
-        reminder: 10,
-        note: "蔬菜占餐盘的一半",
-        done: isPast && completionGate !== 1,
-        source: "示例计划"
-      });
-    }
-
-    tasks.push(
-      {
-        id: makeId(),
-        date: today,
-        time: "18:40",
-        type: "exercise",
-        title: "全身力量训练",
-        duration: 45,
-        calories: 310,
-        reminder: 30,
-        note: "深蹲、推举、划船各 4 组",
-        done: false,
-        source: "示例计划"
-      },
-      {
-        id: makeId(),
-        date: today,
-        time: "20:30",
-        type: "exercise",
-        title: "睡前拉伸",
-        duration: 12,
-        calories: 45,
-        reminder: 5,
-        note: "重点放松髋部与腿后侧",
-        done: false,
-        source: "示例计划"
-      }
-    );
-
-    return tasks;
+    return [];
   }
 
   function loadState() {
@@ -183,7 +93,7 @@
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && Array.isArray(saved.tasks)) {
         return {
-          tasks: saved.tasks,
+          tasks: saved.tasks.filter((task) => task.source !== "示例计划"),
           remindersEnabled: Boolean(saved.remindersEnabled)
         };
       }
@@ -241,7 +151,6 @@
   function taskMeta(task) {
     const parts = [];
     if (Number(task.duration) > 0) parts.push(`${task.duration} 分钟`);
-    if (task.type === "exercise" && Number(task.calories) > 0) parts.push(`约 ${task.calories} 千卡`);
     if (task.reminder !== null && task.reminder !== undefined) {
       parts.push(Number(task.reminder) === 0 ? "准时提醒" : `提前 ${task.reminder} 分钟`);
     }
@@ -371,84 +280,59 @@
     refreshIcons(els.planList);
   }
 
-  function completedExerciseBetween(start, end) {
-    return state.tasks.filter(
-      (task) => task.type === "exercise" && task.done && task.date >= start && task.date <= end
-    );
-  }
-
-  function renderInsights() {
-    const end = todayKey();
-    const start = offsetDate(end, -6);
-    const exercises = completedExerciseBetween(start, end);
-    const calories = exercises.reduce((sum, task) => sum + Number(task.calories || 0), 0);
-    const duration = exercises.reduce((sum, task) => sum + Number(task.duration || 0), 0);
-    const mealTasks = state.tasks.filter(
-      (task) => task.type === "meal" && task.done && task.date >= start && task.date <= end
-    );
-    const totalWeekTasks = state.tasks.filter((task) => task.date >= start && task.date <= end);
-    const completedWeekTasks = totalWeekTasks.filter((task) => task.done);
-    const completion = totalWeekTasks.length ? completedWeekTasks.length / totalWeekTasks.length : 0;
-    const variety = exercises.length && mealTasks.length ? 8 : 0;
-    const score = Math.min(98, Math.round(58 + completion * 32 + variety));
-
-    els.calorieMetric.textContent = calories.toLocaleString("zh-CN");
-    els.durationMetric.textContent = duration.toLocaleString("zh-CN");
-    els.balanceScore.textContent = String(score);
-
-    const chartDays = Array.from({ length: 7 }, (_, index) => offsetDate(end, index - 6));
-    els.barChart.innerHTML = chartDays
-      .map((key) => {
-        const tasks = state.tasks.filter((task) => task.date === key);
-        const done = tasks.filter((task) => task.done).length;
-        const value = tasks.length ? Math.max(8, Math.round((done / tasks.length) * 100)) : 4;
-        const date = dateFromKey(key);
-        return `
-          <div class="bar-column${key === todayKey() ? " is-today" : ""}" title="${formatDateLabel(key)}：${done}/${tasks.length}">
-            <div class="bar-track"><span class="bar-fill" style="height:${value}%"></span></div>
-            <span>${WEEKDAYS[date.getDay()]}</span>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  function renderStreak() {
-    const monday = startOfWeek();
-    els.streakWeek.innerHTML = Array.from({ length: 7 }, (_, index) => {
-      const key = offsetDate(monday, index);
-      const tasks = state.tasks.filter((task) => task.date === key);
-      const done = tasks.length > 0 && tasks.every((task) => task.done);
-      return `
-        <div class="streak-day${done ? " is-done" : ""}${key === todayKey() ? " is-today" : ""}">
-          <span>${done ? '<i data-lucide="check"></i>' : dateFromKey(key).getDate()}</span>
-          周${WEEKDAYS[dateFromKey(key).getDay()]}
-        </div>
-      `;
-    }).join("");
-    refreshIcons(els.streakWeek);
-  }
-
   function renderReminderState() {
-    const permission = "Notification" in window ? Notification.permission : "unsupported";
+    const notifications = window.RhythmNotifications;
+    const permission = notifications?.getCachedPermission() || "unsupported";
+    const isNative = Boolean(notifications?.isNativeAvailable());
     const enabled = state.remindersEnabled && permission === "granted";
     els.notificationButton.classList.toggle("is-enabled", enabled);
     els.reminderToggle.classList.toggle("is-on", enabled);
     els.reminderStatus.textContent = permission === "denied"
-      ? "已被浏览器阻止"
+      ? `已被${isNative ? "系统" : "浏览器"}阻止`
       : enabled
-        ? "已开启，到时发送系统通知"
+        ? `已开启${isNative ? "原生" : "浏览器"}通知`
         : "尚未开启";
     els.notificationButton.setAttribute("aria-label", enabled ? "提醒已开启" : "开启提醒");
+  }
+
+  function syncPlanWidget() {
+    const widget = window.RhythmPlanWidget;
+    if (!widget) return;
+
+    const today = todayKey();
+    const todayTasks = sortTasks(state.tasks.filter((task) => task.date === today));
+    const completed = todayTasks.filter((task) => task.done).length;
+    const next = sortTasks(state.tasks)
+      .find((task) => !task.done && task.date >= today);
+    const nextMeta = next
+      ? [next.type === "meal" ? "饮食" : "运动", Number(next.duration) > 0 ? `${next.duration} 分钟` : "", next.note]
+        .filter(Boolean)
+        .join(" · ")
+      : "";
+
+    widget.update({
+      dateLabel: formatDateLabel(today),
+      completed,
+      total: todayTasks.length,
+      nextTitle: next?.title || "暂无待办计划",
+      nextTime: next ? `${formatDateLabel(next.date, true)} ${next.time}` : "",
+      nextMeta,
+      plansJson: JSON.stringify(
+        sortTasks(state.tasks)
+          .filter((task) => task.date >= today)
+          .slice(0, 200)
+      )
+    }).catch((error) => {
+      console.warn("Unable to update the plan widget.", error);
+    });
   }
 
   function renderAll() {
     renderDateStrip();
     renderToday();
     renderPlans();
-    renderInsights();
-    renderStreak();
     renderReminderState();
+    syncPlanWidget();
   }
 
   function setView(target) {
@@ -461,9 +345,7 @@
 
     const headings = {
       today: [getGreeting(), "今天，也要动起来"],
-      plans: ["整理你的节奏", "让计划更容易坚持"],
-      insights: ["每一步都有回应", "看见身体的变化"],
-      profile: ["你的健康空间", "按喜欢的方式生活"]
+      plans: ["整理你的节奏", "让计划更容易坚持"]
     };
     const [eyebrow, title] = headings[target] || headings.today;
     els.greeting.textContent = eyebrow;
@@ -486,6 +368,7 @@
     task.done = !task.done;
     saveState();
     renderAll();
+    scheduleNextReminder();
     showToast(task.done ? `已完成：${task.title}` : `已恢复：${task.title}`);
   }
 
@@ -523,7 +406,6 @@
       type,
       title: String(formData.get("title")).trim(),
       duration,
-      calories: type === "exercise" ? Math.round(duration * 7.2) : 0,
       reminder: clampNumber(formData.get("reminder"), 0, 1440, 0),
       note: String(formData.get("note") || "").trim(),
       done: false,
@@ -592,7 +474,6 @@
     }
 
     const duration = clampNumber(valueFromAliases(record, ["时长", "时长(分钟)", "duration", "minutes"]), 0, 360, 0);
-    const calories = clampNumber(valueFromAliases(record, ["热量", "卡路里", "calories", "kcal"]), 0, 5000, type === "exercise" ? Math.round(duration * 7.2) : 0);
     const reminder = clampNumber(valueFromAliases(record, ["提醒", "提前提醒", "reminder"]), 0, 1440, 15);
     const doneValue = String(valueFromAliases(record, ["完成", "已完成", "done", "completed"]) || "").toLowerCase();
 
@@ -603,7 +484,6 @@
       type,
       title: title.slice(0, 60),
       duration,
-      calories,
       reminder,
       note: String(valueFromAliases(record, ["备注", "note", "notes"]) || "").trim().slice(0, 200),
       done: ["true", "1", "yes", "是", "已完成"].includes(doneValue),
@@ -704,10 +584,10 @@
   function downloadTemplate() {
     const start = todayKey();
     const csv = [
-      "\uFEFF日期,时间,类型,名称,时长,提醒,热量,备注",
-      `${start},07:30,运动,晨间慢跑,30,15,220,保持轻松呼吸`,
-      `${start},08:20,饮食,高蛋白早餐,20,5,420,鸡蛋和全麦面包`,
-      `${offsetDate(start, 1)},19:00,运动,力量训练,45,30,320,完成四组基础动作`
+      "\uFEFF日期,时间,类型,名称,时长,提醒,备注",
+      `${start},07:30,运动,晨间慢跑,30,15,保持轻松呼吸`,
+      `${start},08:20,饮食,高蛋白早餐,20,5,鸡蛋和全麦面包`,
+      `${offsetDate(start, 1)},19:00,运动,力量训练,45,30,完成四组基础动作`
     ].join("\n");
     downloadFile("律动计划导入模板.csv", csv, "text/csv;charset=utf-8");
     showToast("示例模板已下载", "download");
@@ -723,38 +603,37 @@
   }
 
   async function requestReminders() {
-    if (!("Notification" in window)) {
-      showToast("当前浏览器不支持系统提醒", "circle-alert");
+    const notifications = window.RhythmNotifications;
+    if (!notifications) {
+      showToast("提醒模块加载失败", "circle-alert");
       return;
     }
 
-    if (Notification.permission === "denied") {
-      showToast("请在浏览器设置中允许通知", "circle-alert");
-      renderReminderState();
-      return;
-    }
-
-    const permission = Notification.permission === "granted"
-      ? "granted"
-      : await Notification.requestPermission();
+    const permission = await notifications.requestPermission();
     state.remindersEnabled = permission === "granted";
     saveState();
     renderReminderState();
-    if (state.remindersEnabled) {
-      scheduleNextReminder();
-      showToast("计划提醒已开启", "bell-ring");
+    if (!state.remindersEnabled) {
+      showToast(`请在${notifications.isNativeAvailable() ? "系统" : "浏览器"}设置中允许通知`, "circle-alert");
+      return;
     }
+
+    const result = await scheduleNextReminder();
+    const count = Number(result?.scheduled || 0);
+    showToast(count ? `提醒已开启，已安排 ${count} 项` : "提醒已开启", "bell-ring");
   }
 
-  function toggleReminders() {
-    if (!("Notification" in window) || !state.remindersEnabled || Notification.permission !== "granted") {
-      requestReminders();
+  async function toggleReminders() {
+    const notifications = window.RhythmNotifications;
+    if (!state.remindersEnabled || notifications?.getCachedPermission() !== "granted") {
+      await requestReminders();
       return;
     }
     state.remindersEnabled = false;
     saveState();
     renderReminderState();
     clearTimeout(reminderTimer);
+    await scheduleNextReminder();
     showToast("计划提醒已关闭", "bell-off");
   }
 
@@ -799,6 +678,7 @@
   }
 
   function checkDueReminders() {
+    if (window.RhythmNotifications?.isNativeAvailable()) return;
     if (!state.remindersEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
     const now = Date.now();
     const sent = notifiedSet();
@@ -821,8 +701,12 @@
     }
   }
 
-  function scheduleNextReminder() {
+  async function scheduleNextReminder() {
     clearTimeout(reminderTimer);
+    const notifications = window.RhythmNotifications;
+    if (notifications?.isNativeAvailable()) {
+      return notifications.sync(state.tasks, state.remindersEnabled);
+    }
     if (!state.remindersEnabled) return;
     checkDueReminders();
     const now = Date.now();
@@ -832,36 +716,21 @@
     if (!next) return;
     const delay = Math.min(reminderTimestamp(next) - now, 24 * 60 * 60 * 1000);
     reminderTimer = window.setTimeout(scheduleNextReminder, Math.max(1000, delay));
+    return { native: false, scheduled: 1 };
   }
 
-  async function shareSummary() {
-    const week = weeklyTasks();
-    const done = week.filter((task) => task.done).length;
-    const text = `我这周在律动完成了 ${done}/${week.length} 项健康计划。`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "我的健康周报", text });
+  async function installPlanWidget() {
+    try {
+      const result = await window.RhythmPlanWidget?.requestPin();
+      if (result?.requested) {
+        showToast("已请求添加桌面计划组件", "panels-top-left");
         return;
-      } catch (error) {
-        if (error.name === "AbortError") return;
       }
+      showToast("请在桌面组件列表中添加“律动计划”", "panels-top-left");
+    } catch (error) {
+      console.warn("Unable to request the plan widget.", error);
+      showToast("请从桌面组件列表添加“律动计划”", "panels-top-left");
     }
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(text);
-      showToast("周报摘要已复制", "copy");
-    } else {
-      showToast(text, "share-2");
-    }
-  }
-
-  async function installApp() {
-    if (installPrompt) {
-      installPrompt.prompt();
-      await installPrompt.userChoice;
-      installPrompt = null;
-      return;
-    }
-    showToast("请使用浏览器菜单中的“添加到主屏幕”", "smartphone");
   }
 
   function bindEvents() {
@@ -961,27 +830,18 @@
     document.addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (action === "export") exportPlans();
-      if (action === "share") shareSummary();
-      if (action === "install") installApp();
+      if (action === "widget") installPlanWidget();
       if (action === "reset") els.confirmDialog.showModal();
     });
 
-    els.confirmResetButton.addEventListener("click", () => {
-      state = {
-        tasks: createDefaultTasks(),
-        remindersEnabled: state.remindersEnabled
-      };
+    els.confirmResetButton.addEventListener("click", async () => {
+      state.tasks = [];
       selectedDate = todayKey();
       localStorage.removeItem(NOTIFIED_KEY);
       saveState();
       renderAll();
-      scheduleNextReminder();
-      showToast("示例数据已恢复");
-    });
-
-    window.addEventListener("beforeinstallprompt", (event) => {
-      event.preventDefault();
-      installPrompt = event;
+      await scheduleNextReminder();
+      showToast("全部计划已清除", "trash-2");
     });
 
     window.addEventListener("focus", checkDueReminders);
@@ -1004,6 +864,22 @@
     }
   }
 
+  async function initializeReminders() {
+    const notifications = window.RhythmNotifications;
+    if (!notifications) return;
+    try {
+      const permission = await notifications.checkPermission();
+      if (state.remindersEnabled && permission !== "granted") {
+        state.remindersEnabled = false;
+        saveState();
+      }
+      renderReminderState();
+      await scheduleNextReminder();
+    } catch (error) {
+      console.warn("Unable to initialize reminders.", error);
+    }
+  }
+
   function init() {
     els.greeting.textContent = getGreeting();
     saveState();
@@ -1011,7 +887,7 @@
     bindEvents();
     renderAll();
     registerServiceWorker();
-    scheduleNextReminder();
+    initializeReminders();
     window.setInterval(checkDueReminders, 30 * 1000);
   }
 

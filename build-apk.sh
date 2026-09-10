@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="$ROOT_DIR/dist"
-OUTPUT_APK="$OUTPUT_DIR/rhythm-health-debug.apk"
+OUTPUT_APK="$OUTPUT_DIR/rhythm-plan-debug.apk"
 MIN_NODE_MAJOR=20
 MIN_JAVA_MAJOR=21
 ANDROID_CLI_VERSION=15859902
@@ -270,6 +270,9 @@ prepare_project() {
 
   log "Synchronizing Capacitor"
   npx --no-install cap sync android
+
+  log "Applying Android plan widget"
+  node scripts/prepare-android.js
 
   printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > android/local.properties
   chmod +x android/gradlew

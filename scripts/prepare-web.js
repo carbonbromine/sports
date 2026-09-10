@@ -7,6 +7,8 @@ const entries = [
   "index.html",
   "styles.css",
   "app.js",
+  "home-widget.js",
+  "local-notifications.js",
   "manifest.webmanifest",
   "service-worker.js",
   "assets",

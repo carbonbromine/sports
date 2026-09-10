@@ -88,86 +88,7 @@
             </div>
           </div>
 
-          <div class="plan-list" id="planList"></div>
-        </section>
-
-        <section class="view" id="insightsView" data-view="insights" aria-labelledby="insightsLabel">
-          <div class="page-intro insights-intro">
-            <div>
-              <p class="section-kicker">本周回顾</p>
-              <h2>身体数据</h2>
-              <p class="muted">9月 7日 - 9月 13日</p>
-            </div>
-            <button class="icon-button" type="button" aria-label="分享数据" data-action="share">
-              <i data-lucide="share-2"></i>
-            </button>
-          </div>
-
-          <div class="metric-grid">
-            <article class="metric-card metric-card-dark">
-              <span class="metric-icon"><i data-lucide="flame"></i></span>
-              <p>活动消耗</p>
-              <strong id="calorieMetric">0</strong>
-              <span>千卡</span>
-            </article>
-            <article class="metric-card">
-              <span class="metric-icon coral"><i data-lucide="timer"></i></span>
-              <p>运动时长</p>
-              <strong id="durationMetric">0</strong>
-              <span>分钟</span>
-            </article>
-          </div>
-
-          <article class="chart-section">
-            <div class="chart-heading">
-              <div>
-                <p class="section-kicker">完成趋势</p>
-                <h3>近 7 天活跃度</h3>
-              </div>
-              <span class="trend-badge"><i data-lucide="trending-up"></i> 12%</span>
-            </div>
-            <div class="bar-chart" id="barChart" aria-label="近七天计划完成趋势"></div>
-          </article>
-
-          <article class="balance-section">
-            <div class="balance-visual">
-              <div class="balance-ring">
-                <strong id="balanceScore">86</strong>
-                <span>平衡分</span>
-              </div>
-            </div>
-            <div class="balance-copy">
-              <p class="section-kicker">健康平衡</p>
-              <h3>饮食与运动配合得不错</h3>
-              <p>蛋白质摄入稳定，再增加一次低强度有氧会更理想。</p>
-            </div>
-          </article>
-        </section>
-
-        <section class="view" id="profileView" data-view="profile" aria-labelledby="profileLabel">
-          <div class="profile-hero">
-            <div class="avatar">林</div>
-            <div>
-              <p class="section-kicker">个人中心</p>
-              <h2>林小满</h2>
-              <p class="muted">规律生活第 46 天</p>
-            </div>
-            <button class="icon-button" type="button" aria-label="编辑个人资料">
-              <i data-lucide="pencil"></i>
-            </button>
-          </div>
-
-          <article class="streak-panel">
-            <div>
-              <span class="streak-icon"><i data-lucide="zap"></i></span>
-              <p>连续达标</p>
-              <strong>12 <small>天</small></strong>
-            </div>
-            <div class="streak-week" id="streakWeek"></div>
-          </article>
-
-          <div class="settings-group">
-            <h3>偏好设置</h3>
+          <div class="plan-tools">
             <button class="settings-row" id="reminderSettingsButton" type="button">
               <span class="settings-icon green"><i data-lucide="bell-ring"></i></span>
               <span class="settings-copy">
@@ -176,35 +97,33 @@
               </span>
               <span class="toggle" id="reminderToggle" aria-hidden="true"><span></span></span>
             </button>
-            <button class="settings-row" type="button" data-action="export">
-              <span class="settings-icon orange"><i data-lucide="file-down"></i></span>
+            <button class="settings-row" type="button" data-action="widget">
+              <span class="settings-icon blue"><i data-lucide="panels-top-left"></i></span>
               <span class="settings-copy">
-                <strong>导出我的计划</strong>
-                <small>JSON 格式，可随时备份</small>
+                <strong>桌面计划组件</strong>
+                <small>在桌面查看下一项安排</small>
               </span>
               <i class="row-chevron" data-lucide="chevron-right"></i>
             </button>
-            <button class="settings-row" type="button" data-action="install">
-              <span class="settings-icon blue"><i data-lucide="smartphone"></i></span>
+            <button class="settings-row" type="button" data-action="export">
+              <span class="settings-icon orange"><i data-lucide="file-down"></i></span>
               <span class="settings-copy">
-                <strong>安装到手机</strong>
-                <small>添加到主屏幕，使用更方便</small>
+                <strong>导出计划</strong>
+                <small>JSON 格式本地备份</small>
+              </span>
+              <i class="row-chevron" data-lucide="chevron-right"></i>
+            </button>
+            <button class="settings-row danger-row" type="button" data-action="reset">
+              <span class="settings-icon red"><i data-lucide="trash-2"></i></span>
+              <span class="settings-copy">
+                <strong>清除全部计划</strong>
+                <small>删除计划和完成记录</small>
               </span>
               <i class="row-chevron" data-lucide="chevron-right"></i>
             </button>
           </div>
 
-          <div class="settings-group">
-            <h3>数据</h3>
-            <button class="settings-row danger-row" type="button" data-action="reset">
-              <span class="settings-icon red"><i data-lucide="rotate-ccw"></i></span>
-              <span class="settings-copy">
-                <strong>恢复示例数据</strong>
-                <small>清除当前记录并重新开始</small>
-              </span>
-              <i class="row-chevron" data-lucide="chevron-right"></i>
-            </button>
-          </div>
+          <div class="plan-list" id="planList"></div>
         </section>
       </main>
 
@@ -213,20 +132,12 @@
           <i data-lucide="house"></i>
           <span>今天</span>
         </button>
-        <button class="nav-item" type="button" data-target="plans" id="plansLabel">
-          <i data-lucide="calendar-days"></i>
-          <span>计划</span>
-        </button>
         <button class="add-button" id="openAddButton" type="button" aria-label="添加计划">
           <i data-lucide="plus"></i>
         </button>
-        <button class="nav-item" type="button" data-target="insights" id="insightsLabel">
-          <i data-lucide="chart-no-axes-column-increasing"></i>
-          <span>数据</span>
-        </button>
-        <button class="nav-item" type="button" data-target="profile" id="profileLabel">
-          <i data-lucide="user-round"></i>
-          <span>我的</span>
+        <button class="nav-item" type="button" data-target="plans" id="plansLabel">
+          <i data-lucide="calendar-days"></i>
+          <span>计划</span>
         </button>
       </nav>
     </div>
@@ -337,12 +248,12 @@
 
     <dialog class="confirm-dialog" id="confirmDialog">
       <form method="dialog">
-        <span class="confirm-icon"><i data-lucide="rotate-ccw"></i></span>
-        <h2>恢复示例数据？</h2>
-        <p>当前计划和完成记录将被清除，此操作无法撤销。</p>
+        <span class="confirm-icon"><i data-lucide="trash-2"></i></span>
+        <h2>清除全部计划？</h2>
+        <p>所有计划和完成记录将被删除，此操作无法撤销。</p>
         <div class="confirm-actions">
           <button class="secondary-button" value="cancel">取消</button>
-          <button class="danger-button" id="confirmResetButton" value="confirm">确认恢复</button>
+          <button class="danger-button" id="confirmResetButton" value="confirm">确认清除</button>
         </div>
       </form>
     </dialog>
@@ -353,6 +264,8 @@
     </div>
 
     <script src="./vendor/lucide.min.js"></script>
+    <script src="./home-widget.js"></script>
+    <script src="./local-notifications.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

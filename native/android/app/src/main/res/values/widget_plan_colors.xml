@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_plan_surface">#FAFBF8</color>
+    <color name="widget_plan_soft">#E8F0EA</color>
+    <color name="widget_plan_accent">#1F6B4D</color>
+    <color name="widget_plan_accent_soft">#DCEBE2</color>
+    <color name="widget_plan_text">#17211B</color>
+    <color name="widget_plan_muted">#738078</color>
+    <color name="widget_plan_divider">#DDE2DD</color>
+    <color name="widget_plan_track">#D1D9D3</color>
+</resources>
