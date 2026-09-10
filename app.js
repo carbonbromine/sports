@@ -7,6 +7,15 @@
   const DAY_MS = 24 * 60 * 60 * 1000;
   const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
   const FULL_WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const ACTIVITY_METS = {
+    walk: { label: "快走", met: 4.3 },
+    run: { label: "跑步", met: 8.3 },
+    cycling: { label: "骑行", met: 7.5 },
+    swimming: { label: "游泳", met: 6 },
+    strength: { label: "力量训练", met: 5 },
+    yoga: { label: "瑜伽", met: 2.8 },
+    other: { label: "其他运动", met: 5 }
+  };
 
   const els = {
     pageTitle: document.querySelector("#pageTitle"),
@@ -57,6 +66,30 @@
     stressMetric: document.querySelector("#stressMetric"),
     stressUpdatedAt: document.querySelector("#stressUpdatedAt"),
     wearableWorkoutList: document.querySelector("#wearableWorkoutList"),
+    dataViewTabs: document.querySelector(".data-view-tabs"),
+    calorieNetMetric: document.querySelector("#calorieNetMetric"),
+    calorieBalanceStatus: document.querySelector("#calorieBalanceStatus"),
+    calorieIntakeMetric: document.querySelector("#calorieIntakeMetric"),
+    basalBurnMetric: document.querySelector("#basalBurnMetric"),
+    exerciseBurnMetric: document.querySelector("#exerciseBurnMetric"),
+    foodPhotoBox: document.querySelector("#foodPhotoBox"),
+    foodPhotoInput: document.querySelector("#foodPhotoInput"),
+    foodPhotoPreview: document.querySelector("#foodPhotoPreview"),
+    foodPhotoPlaceholder: document.querySelector("#foodPhotoPlaceholder"),
+    foodAnalysisState: document.querySelector("#foodAnalysisState"),
+    foodEstimateMode: document.querySelector("#foodEstimateMode"),
+    foodEstimateTotal: document.querySelector("#foodEstimateTotal"),
+    foodEstimateList: document.querySelector("#foodEstimateList"),
+    saveFoodEstimateButton: document.querySelector("#saveFoodEstimateButton"),
+    burnCalculatorForm: document.querySelector("#burnCalculatorForm"),
+    burnResult: document.querySelector("#burnResult"),
+    burnEstimateMetric: document.querySelector("#burnEstimateMetric"),
+    burnMethodLabel: document.querySelector("#burnMethodLabel"),
+    burnIntensityLabel: document.querySelector("#burnIntensityLabel"),
+    bloodPressureNotice: document.querySelector("#bloodPressureNotice"),
+    saveBurnEstimateButton: document.querySelector("#saveBurnEstimateButton"),
+    calorieEntryCount: document.querySelector("#calorieEntryCount"),
+    calorieLedger: document.querySelector("#calorieLedger"),
     streakWeek: document.querySelector("#streakWeek"),
     reminderStatus: document.querySelector("#reminderStatus"),
     reminderToggle: document.querySelector("#reminderToggle"),
@@ -80,11 +113,15 @@
   let state = loadState();
   let selectedDate = todayKey();
   let activeFilter = "all";
+  let activeInsightsPane = "wearable";
   let selectedFile = null;
   let installPrompt = null;
   let toastTimer = 0;
   let reminderTimer = 0;
   let wearableSnapshot = window.RhythmHuaweiHealth?.demoSnapshot() || null;
+  let currentFoodEstimate = null;
+  let currentFoodPhotoUrl = "";
+  let pendingBurnEstimate = null;
 
   function pad(value) {
     return String(value).padStart(2, "0");
@@ -208,13 +245,38 @@
     return tasks;
   }
 
+  function defaultHealthProfile() {
+    return {
+      sex: "female",
+      age: 28,
+      height: 168,
+      weight: 65,
+      restingHeartRate: 62
+    };
+  }
+
+  function emptyCalorieLedger() {
+    return {
+      foods: [],
+      burns: []
+    };
+  }
+
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && Array.isArray(saved.tasks)) {
         return {
           tasks: saved.tasks,
-          remindersEnabled: Boolean(saved.remindersEnabled)
+          remindersEnabled: Boolean(saved.remindersEnabled),
+          healthProfile: {
+            ...defaultHealthProfile(),
+            ...(saved.healthProfile || {})
+          },
+          calorieLedger: {
+            foods: Array.isArray(saved.calorieLedger?.foods) ? saved.calorieLedger.foods : [],
+            burns: Array.isArray(saved.calorieLedger?.burns) ? saved.calorieLedger.burns : []
+          }
         };
       }
     } catch (error) {
@@ -223,7 +285,9 @@
 
     return {
       tasks: createDefaultTasks(),
-      remindersEnabled: false
+      remindersEnabled: false,
+      healthProfile: defaultHealthProfile(),
+      calorieLedger: emptyCalorieLedger()
     };
   }
 
@@ -528,6 +592,315 @@
     refreshIcons(els.wearableWorkoutList);
   }
 
+  function calculateBmr(profile = state.healthProfile) {
+    const sexOffset = profile.sex === "male" ? 5 : -161;
+    return Math.max(0, Math.round(
+      10 * Number(profile.weight) +
+      6.25 * Number(profile.height) -
+      5 * Number(profile.age) +
+      sexOffset
+    ));
+  }
+
+  function currentBasalBurn() {
+    const now = new Date();
+    const elapsedMinutes = now.getHours() * 60 + now.getMinutes();
+    return Math.round(calculateBmr() * (elapsedMinutes / 1440));
+  }
+
+  function todayCalorieEntries() {
+    const date = todayKey();
+    const plannedMeals = state.tasks
+      .filter((task) => task.date === date && task.type === "meal" && task.done && Number(task.calories) > 0)
+      .map((task) => ({
+        id: `task:${task.id}`,
+        kind: "intake",
+        title: task.title,
+        calories: Number(task.calories),
+        detail: "已完成饮食计划",
+        time: task.time,
+        removable: false
+      }));
+    const foods = state.calorieLedger.foods
+      .filter((entry) => entry.date === date)
+      .map((entry) => ({
+        ...entry,
+        kind: "intake",
+        detail: `${entry.portionGrams}g · ${entry.source === "live" ? "图片识别" : "演示估算"}`,
+        removable: true
+      }));
+    const wearableCalories = Number(wearableSnapshot?.activity?.caloriesKcal || 0);
+    const wearableEntry = wearableCalories > 0
+      ? [{
+        id: "wearable:today",
+        kind: "burn",
+        title: "手环活动消耗",
+        calories: wearableCalories,
+        detail: wearableSnapshot?.mode === "live" ? "HUAWEI Health" : "手环演示数据",
+        time: "现在",
+        removable: false
+      }]
+      : [];
+    const burns = state.calorieLedger.burns
+      .filter((entry) => entry.date === date)
+      .map((entry) => ({
+        ...entry,
+        kind: "burn",
+        detail: `${entry.duration}分钟 · ${entry.method}`,
+        removable: true
+      }));
+
+    return [...plannedMeals, ...foods, ...wearableEntry, ...burns]
+      .sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
+  }
+
+  function renderCalorieSummary() {
+    const entries = todayCalorieEntries();
+    const intake = entries
+      .filter((entry) => entry.kind === "intake")
+      .reduce((sum, entry) => sum + Number(entry.calories || 0), 0);
+    const activityBurn = entries
+      .filter((entry) => entry.kind === "burn")
+      .reduce((sum, entry) => sum + Number(entry.calories || 0), 0);
+    const basalBurn = currentBasalBurn();
+    const net = Math.round(intake - basalBurn - activityBurn);
+
+    els.calorieIntakeMetric.textContent = Math.round(intake).toLocaleString("zh-CN");
+    els.basalBurnMetric.textContent = basalBurn.toLocaleString("zh-CN");
+    els.exerciseBurnMetric.textContent = Math.round(activityBurn).toLocaleString("zh-CN");
+    els.calorieNetMetric.textContent = `${net > 0 ? "+" : ""}${net.toLocaleString("zh-CN")}`;
+    els.calorieBalanceStatus.textContent = net > 300
+      ? "当前摄入高于消耗"
+      : net < -300
+        ? "当前消耗高于摄入"
+        : "当前摄入与消耗接近平衡";
+    els.calorieEntryCount.textContent = `${entries.length} 条`;
+
+    els.calorieLedger.innerHTML = entries.length
+      ? entries.map((entry) => `
+        <article class="ledger-row">
+          <span class="ledger-icon${entry.kind === "burn" ? " burn" : ""}">
+            <i data-lucide="${entry.kind === "burn" ? "flame" : "utensils"}"></i>
+          </span>
+          <div class="ledger-copy">
+            <strong>${escapeHTML(entry.title)}</strong>
+            <span>${escapeHTML(entry.time || "")} · ${escapeHTML(entry.detail || "")}</span>
+          </div>
+          <strong class="ledger-calories ${entry.kind}">${entry.kind === "burn" ? "-" : "+"}${Math.round(entry.calories)} kcal</strong>
+          ${entry.removable
+            ? `<button class="ledger-delete" type="button" data-delete-calorie="${escapeHTML(entry.id)}" data-kind="${entry.kind}" aria-label="删除记录"><i data-lucide="trash-2"></i></button>`
+            : '<span></span>'}
+        </article>
+      `).join("")
+      : `
+        <div class="empty-state">
+          <span><i data-lucide="notebook-tabs"></i></span>
+          <h3>今天还没有热量记录</h3>
+          <p>拍摄食物或估算一次运动消耗后，记录会显示在这里。</p>
+        </div>
+      `;
+    refreshIcons(els.calorieLedger);
+  }
+
+  function renderFoodEstimate() {
+    if (!currentFoodEstimate) {
+      els.foodAnalysisState.hidden = true;
+      return;
+    }
+
+    els.foodAnalysisState.hidden = false;
+    els.foodEstimateMode.textContent = currentFoodEstimate.mode === "live" ? "图片识别" : "演示估算";
+    els.foodEstimateTotal.textContent = window.RhythmNutritionEstimator.totalCalories(currentFoodEstimate.items);
+    els.foodEstimateList.innerHTML = currentFoodEstimate.items.map((item, index) => {
+      const calories = Math.round((item.portionGrams * item.kcalPer100g) / 100);
+      return `
+        <div class="food-estimate-row">
+          <div class="food-estimate-copy">
+            <strong>${escapeHTML(item.name)}</strong>
+            <span>${Math.round(item.confidence * 100)}% 置信度 · ${item.kcalPer100g} kcal/100g</span>
+          </div>
+          <label class="portion-control">
+            <input type="number" min="1" max="2000" value="${item.portionGrams}" data-food-portion="${index}" aria-label="${escapeHTML(item.name)}份量" />
+            <span>g</span>
+          </label>
+          <strong class="food-item-calories" data-food-calories="${index}">${calories} kcal</strong>
+        </div>
+      `;
+    }).join("");
+    els.saveFoodEstimateButton.disabled = false;
+  }
+
+  async function handleFoodPhoto(file) {
+    if (!file) return;
+    if (currentFoodPhotoUrl) URL.revokeObjectURL(currentFoodPhotoUrl);
+    currentFoodPhotoUrl = URL.createObjectURL(file);
+    els.foodPhotoPreview.src = currentFoodPhotoUrl;
+    els.foodPhotoPreview.hidden = false;
+    els.foodPhotoPlaceholder.hidden = true;
+    els.foodPhotoBox.classList.add("has-photo");
+    els.foodAnalysisState.hidden = false;
+    els.foodEstimateMode.textContent = "分析中";
+    els.foodEstimateTotal.textContent = "--";
+    els.foodEstimateList.innerHTML = `
+      <div class="food-analysis-loading">
+        <i data-lucide="loader-circle"></i>
+        <span>正在分析餐盘内容</span>
+      </div>
+    `;
+    refreshIcons(els.foodEstimateList);
+
+    try {
+      currentFoodEstimate = await window.RhythmNutritionEstimator.estimatePhoto(file);
+      renderFoodEstimate();
+    } catch (error) {
+      currentFoodEstimate = null;
+      els.foodAnalysisState.hidden = true;
+      showToast(error.message || "食物照片分析失败", "circle-alert");
+    }
+  }
+
+  function saveFoodEstimate() {
+    if (!currentFoodEstimate) return;
+    const now = new Date();
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const entries = currentFoodEstimate.items.map((item) => ({
+      id: makeId(),
+      date: todayKey(),
+      time,
+      title: item.name,
+      portionGrams: Number(item.portionGrams),
+      calories: Math.round((item.portionGrams * item.kcalPer100g) / 100),
+      source: currentFoodEstimate.mode
+    }));
+    state.calorieLedger.foods.push(...entries);
+    saveState();
+    els.saveFoodEstimateButton.disabled = true;
+    renderCalorieSummary();
+    showToast(`已记录 ${entries.length} 项食物，共 ${window.RhythmNutritionEstimator.totalCalories(currentFoodEstimate.items)} kcal`);
+  }
+
+  function estimateExerciseBurn(formData) {
+    const sex = formData.get("sex") === "male" ? "male" : "female";
+    const age = clampNumber(formData.get("age"), 18, 90, 28);
+    const height = clampNumber(formData.get("height"), 120, 230, 168);
+    const weight = clampNumber(formData.get("weight"), 30, 250, 65);
+    const duration = clampNumber(formData.get("duration"), 1, 600, 30);
+    const heartRate = clampNumber(formData.get("heartRate"), 0, 220, 0);
+    const restingHeartRate = clampNumber(formData.get("restingHeartRate"), 0, 140, 0);
+    const systolic = clampNumber(formData.get("systolic"), 0, 260, 0);
+    const diastolic = clampNumber(formData.get("diastolic"), 0, 180, 0);
+    const activityKey = ACTIVITY_METS[formData.get("activity")] ? formData.get("activity") : "other";
+    const activity = ACTIVITY_METS[activityKey];
+    const canUseHeartRate = heartRate >= Math.max(70, restingHeartRate + 10);
+    let caloriesPerMinute;
+    let method;
+
+    if (canUseHeartRate) {
+      caloriesPerMinute = sex === "male"
+        ? (-55.0969 + 0.6309 * heartRate + 0.1988 * weight + 0.2017 * age) / 4.184
+        : (-20.4022 + 0.4472 * heartRate - 0.1263 * weight + 0.074 * age) / 4.184;
+      method = "心率模型";
+    } else {
+      caloriesPerMinute = activity.met * 3.5 * weight / 200;
+      method = "MET 模型";
+    }
+
+    caloriesPerMinute = Math.max(1, Math.min(30, caloriesPerMinute));
+    const maxHeartRate = 208 - 0.7 * age;
+    const intensityRatio = heartRate > 0 ? heartRate / maxHeartRate : activity.met / 12;
+    const intensity = intensityRatio >= 0.85 ? "高强度" : intensityRatio >= 0.65 ? "中高强度" : intensityRatio >= 0.5 ? "中等强度" : "低强度";
+    let bloodPressureMessage = "血压不参与热量公式，仅用于运动前风险提示。";
+    let bloodPressureWarning = false;
+
+    if (systolic >= 180 || diastolic >= 120) {
+      bloodPressureMessage = "血压读数明显偏高，请停止剧烈运动并复测；如伴不适应及时就医。";
+      bloodPressureWarning = true;
+    } else if (systolic >= 140 || diastolic >= 90) {
+      bloodPressureMessage = "血压读数偏高，本次结果仅供参考，建议降低运动强度。";
+      bloodPressureWarning = true;
+    } else if ((systolic > 0 && systolic < 90) || (diastolic > 0 && diastolic < 60)) {
+      bloodPressureMessage = "血压读数偏低，请关注头晕、乏力等身体反应。";
+      bloodPressureWarning = true;
+    }
+
+    return {
+      id: makeId(),
+      date: todayKey(),
+      time: `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`,
+      kind: "burn",
+      title: activity.label,
+      activity: activityKey,
+      duration,
+      calories: Math.round(caloriesPerMinute * duration),
+      method,
+      intensity,
+      bloodPressureMessage,
+      bloodPressureWarning,
+      profile: { sex, age, height, weight, restingHeartRate }
+    };
+  }
+
+  function showBurnEstimate(estimate) {
+    pendingBurnEstimate = estimate;
+    els.burnEstimateMetric.textContent = estimate.calories;
+    els.burnMethodLabel.textContent = estimate.method;
+    els.burnIntensityLabel.textContent = estimate.intensity;
+    els.bloodPressureNotice.textContent = estimate.bloodPressureMessage;
+    els.bloodPressureNotice.classList.toggle("is-warning", estimate.bloodPressureWarning);
+    els.burnResult.hidden = false;
+    els.saveBurnEstimateButton.disabled = false;
+  }
+
+  function saveBurnEstimate() {
+    if (!pendingBurnEstimate) return;
+    state.calorieLedger.burns.push({
+      id: pendingBurnEstimate.id,
+      date: pendingBurnEstimate.date,
+      time: pendingBurnEstimate.time,
+      title: pendingBurnEstimate.title,
+      duration: pendingBurnEstimate.duration,
+      calories: pendingBurnEstimate.calories,
+      method: pendingBurnEstimate.method
+    });
+    state.healthProfile = pendingBurnEstimate.profile;
+    saveState();
+    els.saveBurnEstimateButton.disabled = true;
+    renderCalorieSummary();
+    showToast(`已记录 ${pendingBurnEstimate.calories} kcal 运动消耗`);
+  }
+
+  function deleteCalorieEntry(id, kind) {
+    const collection = kind === "burn" ? state.calorieLedger.burns : state.calorieLedger.foods;
+    const index = collection.findIndex((entry) => entry.id === id);
+    if (index < 0) return;
+    collection.splice(index, 1);
+    saveState();
+    renderCalorieSummary();
+    showToast("热量记录已删除", "trash-2");
+  }
+
+  function hydrateBurnForm() {
+    const profile = state.healthProfile;
+    els.burnCalculatorForm.elements.sex.value = profile.sex;
+    els.burnCalculatorForm.elements.age.value = profile.age;
+    els.burnCalculatorForm.elements.height.value = profile.height;
+    els.burnCalculatorForm.elements.weight.value = profile.weight;
+    els.burnCalculatorForm.elements.restingHeartRate.value = wearableSnapshot?.heartRate?.resting || profile.restingHeartRate;
+    els.burnCalculatorForm.elements.heartRate.value = wearableSnapshot?.workouts?.[0]?.averageHeartRate || 132;
+  }
+
+  function setInsightsPane(target) {
+    activeInsightsPane = target === "calories" ? "calories" : "wearable";
+    els.dataViewTabs.querySelectorAll("button").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.insightPane === activeInsightsPane);
+    });
+    document.querySelectorAll("[data-insight-content]").forEach((pane) => {
+      pane.classList.toggle("is-active", pane.dataset.insightContent === activeInsightsPane);
+    });
+    els.greeting.textContent = activeInsightsPane === "calories" ? "摄入与消耗" : "每一步都有回应";
+    els.pageTitle.textContent = activeInsightsPane === "calories" ? "看懂今天的热量" : "看见身体的变化";
+  }
+
   function renderStreak() {
     const monday = startOfWeek();
     els.streakWeek.innerHTML = Array.from({ length: 7 }, (_, index) => {
@@ -562,6 +935,7 @@
     renderToday();
     renderPlans();
     renderInsights();
+    renderCalorieSummary();
     renderStreak();
     renderReminderState();
   }
@@ -577,7 +951,9 @@
     const headings = {
       today: [getGreeting(), "今天，也要动起来"],
       plans: ["整理你的节奏", "让计划更容易坚持"],
-      insights: ["每一步都有回应", "看见身体的变化"],
+      insights: activeInsightsPane === "calories"
+        ? ["摄入与消耗", "看懂今天的热量"]
+        : ["每一步都有回应", "看见身体的变化"],
       profile: ["你的健康空间", "按喜欢的方式生活"]
     };
     const [eyebrow, title] = headings[target] || headings.today;
@@ -831,7 +1207,9 @@
   function exportPlans() {
     const content = JSON.stringify({
       exportedAt: new Date().toISOString(),
-      plans: sortTasks(state.tasks)
+      plans: sortTasks(state.tasks),
+      calorieLedger: state.calorieLedger,
+      healthProfile: state.healthProfile
     }, null, 2);
     downloadFile(`律动计划-${todayKey()}.json`, content, "application/json");
     showToast("计划备份已导出", "file-check-2");
@@ -950,6 +1328,25 @@
   }
 
   async function shareSummary() {
+    if (activeInsightsPane === "calories") {
+      const text = `今日摄入 ${els.calorieIntakeMetric.textContent} kcal，基础消耗 ${els.basalBurnMetric.textContent} kcal，活动消耗 ${els.exerciseBurnMetric.textContent} kcal，当前结余 ${els.calorieNetMetric.textContent} kcal。`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "今日热量总结", text });
+          return;
+        } catch (error) {
+          if (error.name === "AbortError") return;
+        }
+      }
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        showToast("热量总结已复制", "copy");
+      } else {
+        showToast(text, "share-2");
+      }
+      return;
+    }
+
     const week = weeklyTasks();
     const done = week.filter((task) => task.done).length;
     const text = `我这周在律动完成了 ${done}/${week.length} 项健康计划。`;
@@ -1063,6 +1460,43 @@
       renderPlans();
     });
 
+    els.dataViewTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-insight-pane]");
+      if (button) setInsightsPane(button.dataset.insightPane);
+    });
+
+    els.foodPhotoInput.addEventListener("change", () => {
+      handleFoodPhoto(els.foodPhotoInput.files[0]);
+    });
+
+    els.foodEstimateList.addEventListener("input", (event) => {
+      const input = event.target.closest("[data-food-portion]");
+      if (!input || !currentFoodEstimate) return;
+      const index = Number(input.dataset.foodPortion);
+      const item = currentFoodEstimate.items[index];
+      if (!item) return;
+      item.portionGrams = clampNumber(input.value, 1, 2000, item.portionGrams);
+      const calories = Math.round((item.portionGrams * item.kcalPer100g) / 100);
+      const calorieLabel = els.foodEstimateList.querySelector(`[data-food-calories="${index}"]`);
+      if (calorieLabel) calorieLabel.textContent = `${calories} kcal`;
+      els.foodEstimateTotal.textContent = window.RhythmNutritionEstimator.totalCalories(currentFoodEstimate.items);
+      els.saveFoodEstimateButton.disabled = false;
+    });
+
+    els.saveFoodEstimateButton.addEventListener("click", saveFoodEstimate);
+
+    els.burnCalculatorForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!els.burnCalculatorForm.reportValidity()) return;
+      showBurnEstimate(estimateExerciseBurn(new FormData(els.burnCalculatorForm)));
+    });
+
+    els.saveBurnEstimateButton.addEventListener("click", saveBurnEstimate);
+    els.calorieLedger.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-calorie]");
+      if (button) deleteCalorieEntry(button.dataset.deleteCalorie, button.dataset.kind);
+    });
+
     document.querySelector("#viewAllButton").addEventListener("click", () => setView("plans"));
     document.querySelector("#openAddButton").addEventListener("click", openAddDialog);
     document.querySelector("#openImportButton").addEventListener("click", () => {
@@ -1141,12 +1575,15 @@
     els.confirmResetButton.addEventListener("click", () => {
       state = {
         tasks: createDefaultTasks(),
-        remindersEnabled: state.remindersEnabled
+        remindersEnabled: state.remindersEnabled,
+        healthProfile: defaultHealthProfile(),
+        calorieLedger: emptyCalorieLedger()
       };
       selectedDate = todayKey();
       localStorage.removeItem(NOTIFIED_KEY);
       saveState();
       renderAll();
+      hydrateBurnForm();
       scheduleNextReminder();
       showToast("示例数据已恢复");
     });
@@ -1182,6 +1619,7 @@
     refreshIcons();
     bindEvents();
     renderAll();
+    hydrateBurnForm();
     registerServiceWorker();
     scheduleNextReminder();
     window.setInterval(checkDueReminders, 30 * 1000);

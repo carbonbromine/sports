@@ -103,7 +103,13 @@
             </button>
           </div>
 
-          <article class="wearable-card" id="wearableCard">
+          <div class="data-view-tabs" role="tablist" aria-label="数据视图">
+            <button class="is-active" type="button" role="tab" data-insight-pane="wearable">手环数据</button>
+            <button type="button" role="tab" data-insight-pane="calories">热量账本</button>
+          </div>
+
+          <div class="insights-pane is-active" id="wearableInsightsPane" data-insight-content="wearable">
+            <article class="wearable-card" id="wearableCard">
             <span class="wearable-icon"><i data-lucide="watch"></i></span>
             <div class="wearable-copy">
               <div class="wearable-name-row">
@@ -230,6 +236,181 @@
             </div>
             <div class="workout-list" id="wearableWorkoutList"></div>
           </section>
+          </div>
+
+          <div class="insights-pane" id="calorieInsightsPane" data-insight-content="calories">
+            <article class="calorie-summary-card">
+              <div class="calorie-summary-top">
+                <div>
+                  <p>今日热量结余</p>
+                  <strong><b id="calorieNetMetric">0</b> <small>kcal</small></strong>
+                  <span id="calorieBalanceStatus">正在汇总</span>
+                </div>
+                <span class="calorie-summary-icon"><i data-lucide="scale"></i></span>
+              </div>
+              <div class="calorie-summary-grid">
+                <div>
+                  <span>摄入</span>
+                  <strong id="calorieIntakeMetric">0</strong>
+                </div>
+                <div>
+                  <span>基础消耗</span>
+                  <strong id="basalBurnMetric">0</strong>
+                </div>
+                <div>
+                  <span>活动消耗</span>
+                  <strong id="exerciseBurnMetric">0</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="food-camera-card health-data-card">
+              <div class="health-card-heading">
+                <div>
+                  <p class="section-kicker">饮食摄入</p>
+                  <h3>拍照估算热量</h3>
+                </div>
+                <span class="estimate-label">可校正</span>
+              </div>
+              <label class="food-photo-box" id="foodPhotoBox" for="foodPhotoInput">
+                <input id="foodPhotoInput" type="file" accept="image/*" capture="environment" />
+                <img id="foodPhotoPreview" alt="待分析的食物照片" hidden />
+                <span class="food-photo-placeholder" id="foodPhotoPlaceholder">
+                  <i data-lucide="camera"></i>
+                  <strong>拍摄或选择食物照片</strong>
+                  <small>尽量从正上方拍摄完整餐盘</small>
+                </span>
+                <span class="photo-change-label"><i data-lucide="camera"></i> 重新选择</span>
+              </label>
+
+              <div class="food-analysis-state" id="foodAnalysisState" hidden>
+                <div class="estimate-heading">
+                  <div>
+                    <span class="estimate-mode" id="foodEstimateMode">演示估算</span>
+                    <h4>识别结果</h4>
+                  </div>
+                  <strong><b id="foodEstimateTotal">0</b> kcal</strong>
+                </div>
+                <div class="food-estimate-list" id="foodEstimateList"></div>
+                <p class="estimate-note">图片只能估计食物类别，份量和烹饪用油会显著影响结果，请确认后记录。</p>
+                <button class="primary-button full-width" id="saveFoodEstimateButton" type="button">
+                  <i data-lucide="plus"></i>
+                  计入今日摄入
+                </button>
+              </div>
+            </article>
+
+            <article class="burn-calculator-card health-data-card">
+              <div class="health-card-heading">
+                <div>
+                  <p class="section-kicker">消耗估算</p>
+                  <h3>本次运动消耗</h3>
+                </div>
+                <span class="estimate-label heart"><i data-lucide="heart-pulse"></i> 心率优先</span>
+              </div>
+
+              <form class="burn-form" id="burnCalculatorForm">
+                <div class="compact-field-grid">
+                  <label>
+                    <span>性别</span>
+                    <select name="sex">
+                      <option value="female">女</option>
+                      <option value="male">男</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>年龄</span>
+                    <input name="age" type="number" min="18" max="90" value="28" required />
+                  </label>
+                  <label>
+                    <span>身高 cm</span>
+                    <input name="height" type="number" min="120" max="230" value="168" required />
+                  </label>
+                  <label>
+                    <span>体重 kg</span>
+                    <input name="weight" type="number" min="30" max="250" step="0.1" value="65" required />
+                  </label>
+                </div>
+
+                <div class="field-separator">
+                  <span>运动信息</span>
+                  <span>用于估算，不是医疗测量</span>
+                </div>
+
+                <label class="wide-field">
+                  <span>运动类型</span>
+                  <select name="activity">
+                    <option value="walk">快走</option>
+                    <option value="run" selected>跑步</option>
+                    <option value="cycling">骑行</option>
+                    <option value="swimming">游泳</option>
+                    <option value="strength">力量训练</option>
+                    <option value="yoga">瑜伽</option>
+                    <option value="other">其他运动</option>
+                  </select>
+                </label>
+
+                <div class="compact-field-grid">
+                  <label>
+                    <span>运动时长 min</span>
+                    <input name="duration" type="number" min="1" max="600" value="30" required />
+                  </label>
+                  <label>
+                    <span>平均心率 bpm</span>
+                    <input name="heartRate" type="number" min="40" max="220" value="132" />
+                  </label>
+                  <label>
+                    <span>静息心率 bpm</span>
+                    <input name="restingHeartRate" type="number" min="35" max="140" value="62" />
+                  </label>
+                  <label class="blood-pressure-field">
+                    <span>血压 mmHg</span>
+                    <span class="blood-pressure-inputs">
+                      <input name="systolic" aria-label="收缩压" type="number" min="60" max="260" value="118" />
+                      <b>/</b>
+                      <input name="diastolic" aria-label="舒张压" type="number" min="35" max="180" value="76" />
+                    </span>
+                  </label>
+                </div>
+
+                <button class="primary-button full-width" type="submit">
+                  <i data-lucide="calculator"></i>
+                  计算消耗
+                </button>
+              </form>
+
+              <div class="burn-result" id="burnResult" hidden>
+                <div>
+                  <span>预计消耗</span>
+                  <strong><b id="burnEstimateMetric">0</b> kcal</strong>
+                </div>
+                <div>
+                  <span>估算方法</span>
+                  <strong id="burnMethodLabel">心率模型</strong>
+                </div>
+                <div>
+                  <span>运动强度</span>
+                  <strong id="burnIntensityLabel">中等</strong>
+                </div>
+                <p class="bp-notice" id="bloodPressureNotice"></p>
+                <button class="secondary-button full-width" id="saveBurnEstimateButton" type="button">
+                  <i data-lucide="plus"></i>
+                  计入今日消耗
+                </button>
+              </div>
+            </article>
+
+            <section class="calorie-ledger-section">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="section-kicker">今日明细</p>
+                  <h2>热量记录</h2>
+                </div>
+                <span class="source-label" id="calorieEntryCount">0 条</span>
+              </div>
+              <div class="calorie-ledger" id="calorieLedger"></div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="profileView" data-view="profile" aria-labelledby="profileLabel">
@@ -479,6 +660,7 @@
 
     <script src="./vendor/lucide.min.js"></script>
     <script src="./huawei-health.js"></script>
+    <script src="./nutrition-estimator.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

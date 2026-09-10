@@ -1,10 +1,11 @@
-const CACHE_NAME = "rhythm-health-v2";
+const CACHE_NAME = "rhythm-health-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./huawei-health.js",
+  "./nutrition-estimator.js",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",
   "./vendor/lucide.min.js"
