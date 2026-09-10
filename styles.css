@@ -1870,6 +1870,18 @@ label:focus-within {
   margin-top: 12px;
 }
 
+.manual-food-form .secondary-button {
+  height: 42px;
+  margin-top: 12px;
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.manual-food-form .secondary-button svg {
+  width: 15px;
+  height: 15px;
+}
+
 .burn-form {
   margin-top: 14px;
 }

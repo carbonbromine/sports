@@ -16,7 +16,12 @@ Web 层入口位于 `nutrition-estimator.js`，按以下优先级选择识别服
 
 1. Capacitor 原生插件 `FoodCalorieEstimator.estimateMeal`
 2. `window.RhythmConfig.foodEstimatorEndpoint` 配置的服务端接口
-3. 明确标记为“演示估算”的本地示例结果
+
+未配置上述任一识别服务时，应用不会根据文件名随机生成结果，而是明确提示图片识别尚未配置。此时仍可按食物营养表填写名称、实际份量和每 100 克热量，应用使用以下公式记录：
+
+```text
+摄入热量 = 实际份量克数 * 每 100 克热量 / 100
+```
 
 生产接口接受 `multipart/form-data`：
 

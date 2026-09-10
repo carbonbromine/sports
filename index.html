@@ -114,7 +114,7 @@
             <div class="wearable-copy">
               <div class="wearable-name-row">
                 <h3>HUAWEI Band 6</h3>
-                <span class="demo-badge" id="wearableMode">演示数据</span>
+                <span class="demo-badge" id="wearableMode">未连接</span>
               </div>
               <p id="wearableStatus">通过 HUAWEI Health 同步</p>
               <small id="wearableSyncTime">尚未连接</small>
@@ -286,7 +286,7 @@
               <div class="food-analysis-state" id="foodAnalysisState" hidden>
                 <div class="estimate-heading">
                   <div>
-                    <span class="estimate-mode" id="foodEstimateMode">演示估算</span>
+                    <span class="estimate-mode" id="foodEstimateMode">图片识别</span>
                     <h4>识别结果</h4>
                   </div>
                   <strong><b id="foodEstimateTotal">0</b> kcal</strong>
@@ -298,6 +298,31 @@
                   计入今日摄入
                 </button>
               </div>
+
+              <form class="manual-food-form" id="manualFoodForm">
+                <div class="field-separator">
+                  <span>手动记录</span>
+                  <span>按包装营养表或食物数据库填写</span>
+                </div>
+                <label class="wide-field">
+                  <span>食物名称</span>
+                  <input name="title" type="text" maxlength="30" placeholder="例如：米饭" required />
+                </label>
+                <div class="compact-field-grid">
+                  <label>
+                    <span>实际份量 g</span>
+                    <input name="portionGrams" type="number" min="1" max="2000" step="1" placeholder="150" required />
+                  </label>
+                  <label>
+                    <span>每 100g 热量 kcal</span>
+                    <input name="kcalPer100g" type="number" min="1" max="1000" step="1" placeholder="116" required />
+                  </label>
+                </div>
+                <button class="secondary-button full-width" type="submit">
+                  <i data-lucide="plus"></i>
+                  计入今日摄入
+                </button>
+              </form>
             </article>
 
             <article class="burn-calculator-card health-data-card">
@@ -320,15 +345,15 @@
                   </label>
                   <label>
                     <span>年龄</span>
-                    <input name="age" type="number" min="18" max="90" value="28" required />
+                    <input name="age" type="number" min="18" max="90" placeholder="28" required />
                   </label>
                   <label>
                     <span>身高 cm</span>
-                    <input name="height" type="number" min="120" max="230" value="168" required />
+                    <input name="height" type="number" min="120" max="230" placeholder="168" required />
                   </label>
                   <label>
                     <span>体重 kg</span>
-                    <input name="weight" type="number" min="30" max="250" step="0.1" value="65" required />
+                    <input name="weight" type="number" min="30" max="250" step="0.1" placeholder="65" required />
                   </label>
                 </div>
 
@@ -357,18 +382,18 @@
                   </label>
                   <label>
                     <span>平均心率 bpm</span>
-                    <input name="heartRate" type="number" min="40" max="220" value="132" />
+                    <input name="heartRate" type="number" min="40" max="220" placeholder="可选" />
                   </label>
                   <label>
                     <span>静息心率 bpm</span>
-                    <input name="restingHeartRate" type="number" min="35" max="140" value="62" />
+                    <input name="restingHeartRate" type="number" min="35" max="140" placeholder="可选" />
                   </label>
                   <label class="blood-pressure-field">
                     <span>血压 mmHg</span>
                     <span class="blood-pressure-inputs">
-                      <input name="systolic" aria-label="收缩压" type="number" min="60" max="260" value="118" />
+                      <input name="systolic" aria-label="收缩压" type="number" min="60" max="260" placeholder="收缩压" />
                       <b>/</b>
-                      <input name="diastolic" aria-label="舒张压" type="number" min="35" max="180" value="76" />
+                      <input name="diastolic" aria-label="舒张压" type="number" min="35" max="180" placeholder="舒张压" />
                     </span>
                   </label>
                 </div>
@@ -415,11 +440,11 @@
 
         <section class="view" id="profileView" data-view="profile" aria-labelledby="profileLabel">
           <div class="profile-hero">
-            <div class="avatar">林</div>
+            <div class="avatar">律</div>
             <div>
               <p class="section-kicker">个人中心</p>
-              <h2>林小满</h2>
-              <p class="muted">规律生活第 46 天</p>
+              <h2>我的健康档案</h2>
+              <p class="muted">数据仅保存在当前设备</p>
             </div>
             <button class="icon-button" type="button" aria-label="编辑个人资料">
               <i data-lucide="pencil"></i>
@@ -429,8 +454,8 @@
           <article class="streak-panel">
             <div>
               <span class="streak-icon"><i data-lucide="zap"></i></span>
-              <p>连续达标</p>
-              <strong>12 <small>天</small></strong>
+              <p>本周完成</p>
+              <strong><b id="profileWeekDone">0</b> <small>项</small></strong>
             </div>
             <div class="streak-week" id="streakWeek"></div>
           </article>
@@ -474,10 +499,10 @@
           <div class="settings-group">
             <h3>数据</h3>
             <button class="settings-row danger-row" type="button" data-action="reset">
-              <span class="settings-icon red"><i data-lucide="rotate-ccw"></i></span>
+              <span class="settings-icon red"><i data-lucide="trash-2"></i></span>
               <span class="settings-copy">
-                <strong>恢复示例数据</strong>
-                <small>清除当前记录并重新开始</small>
+                <strong>清除全部计划</strong>
+                <small>删除运动和饮食计划</small>
               </span>
               <i class="row-chevron" data-lucide="chevron-right"></i>
             </button>
@@ -614,12 +639,12 @@
 
     <dialog class="confirm-dialog" id="confirmDialog">
       <form method="dialog">
-        <span class="confirm-icon"><i data-lucide="rotate-ccw"></i></span>
-        <h2>恢复示例数据？</h2>
-        <p>当前计划和完成记录将被清除，此操作无法撤销。</p>
+        <span class="confirm-icon"><i data-lucide="trash-2"></i></span>
+        <h2>清除全部计划？</h2>
+        <p>所有运动和饮食计划及完成状态将被删除，热量记录不会受影响。</p>
         <div class="confirm-actions">
           <button class="secondary-button" value="cancel">取消</button>
-          <button class="danger-button" id="confirmResetButton" value="confirm">确认恢复</button>
+          <button class="danger-button" id="confirmResetButton" value="confirm">确认清除</button>
         </div>
       </form>
     </dialog>
@@ -645,8 +670,8 @@
         <div class="connection-notice">
           <i data-lucide="shield-check"></i>
           <div>
-            <strong>当前展示演示数据</strong>
-            <p>正式连接需要在华为开发者后台申请 Health Service Kit，并由用户逐项授权健康数据。</p>
+            <strong>当前安装包尚未开通华为数据权限</strong>
+            <p>需先在华为开发者后台通过 Health Service Kit 审核并配置应用签名，之后才能由用户授权读取。</p>
           </div>
         </div>
         <div class="scope-preview">
@@ -670,6 +695,7 @@
     <script src="./huawei-health.js"></script>
     <script src="./nutrition-estimator.js"></script>
     <script src="./home-widget.js"></script>
+    <script src="./local-notifications.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

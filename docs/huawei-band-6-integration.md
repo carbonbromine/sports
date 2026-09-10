@@ -59,7 +59,7 @@ Band 6 不提供可用于本看板的体温、ECG、血压数据，因此不设�
 - `getStatus()`：检查原生插件与授权状态。
 - `connect()`：发起 Health Service Kit 用户授权。
 - `sync()`：获取近七天数据并转换成统一看板模型。
-- `demoSnapshot()`：在未集成华为凭据时提供明确标注的演示数据。
+- `emptySnapshot()`：未接入原生插件时只提供空状态，不生成模拟健康数据。
 
 原生 Capacitor 插件需暴露以下接口：
 
@@ -70,6 +70,8 @@ HuaweiHealth.readDashboard({ startTime, endTime })
 ```
 
 正式接入时应在 Android 原生层完成 Health Service Kit SDK 初始化、授权和查询，不应在 WebView 中保存 Access Token。Web 层只接收展示所需的聚合结果。
+
+当前 APK 尚未包含 `HuaweiHealth` 原生插件及华为项目凭据，因此“连接说明”不会直接配对手环。用户端必须先在 HUAWEI Health 中完成 Band 6 配对；开发侧补齐下列配置并重新签名打包后，应用才能发起数据授权。
 
 ## 待提供配置
 

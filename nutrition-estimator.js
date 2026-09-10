@@ -1,23 +1,6 @@
 (() => {
   "use strict";
 
-  const DEMO_MEALS = [
-    [
-      { name: "杂粮米饭", portionGrams: 180, kcalPer100g: 116, confidence: 0.91 },
-      { name: "香煎鸡胸", portionGrams: 130, kcalPer100g: 165, confidence: 0.87 },
-      { name: "清炒时蔬", portionGrams: 160, kcalPer100g: 72, confidence: 0.84 }
-    ],
-    [
-      { name: "番茄牛肉面", portionGrams: 420, kcalPer100g: 112, confidence: 0.82 },
-      { name: "水煮蛋", portionGrams: 50, kcalPer100g: 144, confidence: 0.94 }
-    ],
-    [
-      { name: "燕麦酸奶杯", portionGrams: 260, kcalPer100g: 126, confidence: 0.88 },
-      { name: "香蕉", portionGrams: 110, kcalPer100g: 93, confidence: 0.92 },
-      { name: "混合坚果", portionGrams: 18, kcalPer100g: 618, confidence: 0.76 }
-    ]
-  ];
-
   function normalizeItems(items) {
     return (Array.isArray(items) ? items : [])
       .map((item, index) => ({
@@ -57,16 +40,6 @@
     });
   }
 
-  function demoEstimate(file) {
-    const seed = [...String(file?.name || "meal")]
-      .reduce((total, character) => total + character.charCodeAt(0), Number(file?.size || 0));
-    const items = DEMO_MEALS[Math.abs(seed) % DEMO_MEALS.length].map((item, index) => ({
-      ...item,
-      id: `demo-${Date.now()}-${index}`
-    }));
-    return normalizeResult({ items }, "demo");
-  }
-
   async function estimateWithNativePlugin(plugin, file) {
     const dataUrl = await readAsDataUrl(file);
     const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
@@ -103,11 +76,14 @@
       return estimateWithApi(endpoint, file);
     }
 
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-    return demoEstimate(file);
+    throw new Error("当前安装包尚未配置食物图片识别服务");
   }
 
   window.RhythmNutritionEstimator = {
+    isAvailable: () => Boolean(
+      window.Capacitor?.Plugins?.FoodCalorieEstimator?.estimateMeal ||
+      window.RhythmConfig?.foodEstimatorEndpoint
+    ),
     estimatePhoto,
     totalCalories
   };

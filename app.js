@@ -81,6 +81,7 @@
     foodEstimateTotal: document.querySelector("#foodEstimateTotal"),
     foodEstimateList: document.querySelector("#foodEstimateList"),
     saveFoodEstimateButton: document.querySelector("#saveFoodEstimateButton"),
+    manualFoodForm: document.querySelector("#manualFoodForm"),
     burnCalculatorForm: document.querySelector("#burnCalculatorForm"),
     burnResult: document.querySelector("#burnResult"),
     burnEstimateMetric: document.querySelector("#burnEstimateMetric"),
@@ -91,6 +92,7 @@
     calorieEntryCount: document.querySelector("#calorieEntryCount"),
     calorieLedger: document.querySelector("#calorieLedger"),
     streakWeek: document.querySelector("#streakWeek"),
+    profileWeekDone: document.querySelector("#profileWeekDone"),
     reminderStatus: document.querySelector("#reminderStatus"),
     reminderToggle: document.querySelector("#reminderToggle"),
     addDialog: document.querySelector("#addDialog"),
@@ -118,7 +120,7 @@
   let installPrompt = null;
   let toastTimer = 0;
   let reminderTimer = 0;
-  let wearableSnapshot = window.RhythmHuaweiHealth?.demoSnapshot() || null;
+  let wearableSnapshot = window.RhythmHuaweiHealth?.emptySnapshot() || null;
   let currentFoodEstimate = null;
   let currentFoodPhotoUrl = "";
   let pendingBurnEstimate = null;
@@ -159,99 +161,16 @@
   }
 
   function createDefaultTasks() {
-    const today = todayKey();
-    const exerciseNames = ["轻松慢跑", "核心激活", "下肢力量", "舒展瑜伽", "间歇快走", "上肢力量", "户外骑行"];
-    const mealNames = ["燕麦坚果早餐", "鸡胸肉能量碗", "杂粮轻食午餐", "牛油果全麦吐司", "三文鱼蔬菜餐", "酸奶水果杯", "菌菇豆腐晚餐"];
-    const tasks = [];
-
-    for (let offset = -6; offset <= 6; offset += 1) {
-      const date = offsetDate(today, offset);
-      const index = ((dateFromKey(date).getDay() + 6) % 7);
-      const isPast = offset < 0;
-      const completionGate = Math.abs(offset) % 4;
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "07:30",
-        type: "exercise",
-        title: exerciseNames[index],
-        duration: 35 + (index % 3) * 5,
-        calories: 220 + index * 18,
-        reminder: 15,
-        note: "保持可顺畅说话的呼吸节奏",
-        done: isPast && completionGate !== 0,
-        source: "示例计划"
-      });
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "08:25",
-        type: "meal",
-        title: mealNames[index],
-        duration: 20,
-        calories: 420 + index * 16,
-        reminder: 5,
-        note: "注意补充水分与优质蛋白",
-        done: isPast || offset === 0,
-        source: "示例计划"
-      });
-
-      tasks.push({
-        id: makeId(),
-        date,
-        time: "12:30",
-        type: "meal",
-        title: index % 2 ? "彩虹蔬菜午餐" : "低脂高蛋白午餐",
-        duration: 25,
-        calories: 560,
-        reminder: 10,
-        note: "蔬菜占餐盘的一半",
-        done: isPast && completionGate !== 1,
-        source: "示例计划"
-      });
-    }
-
-    tasks.push(
-      {
-        id: makeId(),
-        date: today,
-        time: "18:40",
-        type: "exercise",
-        title: "全身力量训练",
-        duration: 45,
-        calories: 310,
-        reminder: 30,
-        note: "深蹲、推举、划船各 4 组",
-        done: false,
-        source: "示例计划"
-      },
-      {
-        id: makeId(),
-        date: today,
-        time: "20:30",
-        type: "exercise",
-        title: "睡前拉伸",
-        duration: 12,
-        calories: 45,
-        reminder: 5,
-        note: "重点放松髋部与腿后侧",
-        done: false,
-        source: "示例计划"
-      }
-    );
-
-    return tasks;
+    return [];
   }
 
   function defaultHealthProfile() {
     return {
       sex: "female",
-      age: 28,
-      height: 168,
-      weight: 65,
-      restingHeartRate: 62
+      age: "",
+      height: "",
+      weight: "",
+      restingHeartRate: ""
     };
   }
 
@@ -266,15 +185,21 @@
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && Array.isArray(saved.tasks)) {
+        const healthProfileConfigured = Boolean(
+          saved.healthProfileConfigured ||
+          (Array.isArray(saved.calorieLedger?.burns) && saved.calorieLedger.burns.length)
+        );
         return {
-          tasks: saved.tasks,
+          tasks: saved.tasks.filter((task) => task.source !== "示例计划"),
           remindersEnabled: Boolean(saved.remindersEnabled),
-          healthProfile: {
-            ...defaultHealthProfile(),
-            ...(saved.healthProfile || {})
-          },
+          healthProfileConfigured,
+          healthProfile: healthProfileConfigured
+            ? { ...defaultHealthProfile(), ...(saved.healthProfile || {}) }
+            : defaultHealthProfile(),
           calorieLedger: {
-            foods: Array.isArray(saved.calorieLedger?.foods) ? saved.calorieLedger.foods : [],
+            foods: Array.isArray(saved.calorieLedger?.foods)
+              ? saved.calorieLedger.foods.filter((entry) => entry.source !== "demo")
+              : [],
             burns: Array.isArray(saved.calorieLedger?.burns) ? saved.calorieLedger.burns : []
           }
         };
@@ -286,6 +211,7 @@
     return {
       tasks: createDefaultTasks(),
       remindersEnabled: false,
+      healthProfileConfigured: false,
       healthProfile: defaultHealthProfile(),
       calorieLedger: emptyCalorieLedger()
     };
@@ -513,7 +439,7 @@
   }
 
   function renderInsights() {
-    const snapshot = wearableSnapshot || window.RhythmHuaweiHealth.demoSnapshot();
+    const snapshot = wearableSnapshot || window.RhythmHuaweiHealth.emptySnapshot();
     const device = snapshot.device || {};
     const activity = snapshot.activity || {};
     const heartRate = snapshot.heartRate || {};
@@ -526,11 +452,11 @@
     const stepPercent = Math.min(100, Math.round((steps / stepGoal) * 100));
 
     els.wearableDateLabel.textContent = formatDateLabel(todayKey());
-    els.wearableMode.textContent = isLive ? "已连接" : "演示数据";
+    els.wearableMode.textContent = isLive ? "已连接" : "未连接";
     els.wearableMode.classList.toggle("is-live", isLive);
-    els.wearableStatus.textContent = isLive ? `${device.name || "HUAWEI Band 6"} 已同步` : "通过 HUAWEI Health 同步";
-    els.wearableSyncTime.textContent = isLive ? formatSyncTime(device.updatedAt) : "接入 Health Service Kit 后获取真实数据";
-    els.connectHuaweiButton.querySelector("span").textContent = isLive ? "已连接" : "连接";
+    els.wearableStatus.textContent = isLive ? `${device.name || "HUAWEI Band 6"} 已同步` : "等待 HUAWEI Health 授权";
+    els.wearableSyncTime.textContent = isLive ? formatSyncTime(device.updatedAt) : "当前没有健康数据";
+    els.connectHuaweiButton.querySelector("span").textContent = isLive ? "已连接" : "连接说明";
     els.wearableCard.classList.toggle("is-connected", isLive);
 
     els.stepsMetric.textContent = steps.toLocaleString("zh-CN");
@@ -593,6 +519,7 @@
   }
 
   function calculateBmr(profile = state.healthProfile) {
+    if (!state.healthProfileConfigured) return 0;
     const sexOffset = profile.sex === "male" ? 5 : -161;
     return Math.max(0, Math.round(
       10 * Number(profile.weight) +
@@ -626,17 +553,17 @@
       .map((entry) => ({
         ...entry,
         kind: "intake",
-        detail: `${entry.portionGrams}g · ${entry.source === "live" ? "图片识别" : "演示估算"}`,
+        detail: `${entry.portionGrams}g · ${entry.source === "live" ? "图片识别" : "手动记录"}`,
         removable: true
       }));
     const wearableCalories = Number(wearableSnapshot?.activity?.caloriesKcal || 0);
-    const wearableEntry = wearableCalories > 0
+    const wearableEntry = wearableSnapshot?.mode === "live" && wearableCalories > 0
       ? [{
         id: "wearable:today",
         kind: "burn",
         title: "手环活动消耗",
         calories: wearableCalories,
-        detail: wearableSnapshot?.mode === "live" ? "HUAWEI Health" : "手环演示数据",
+        detail: "HUAWEI Health",
         time: "现在",
         removable: false
       }]
@@ -669,7 +596,7 @@
       netCalories: Math.round(netCalories),
       nextPlan: nextTask?.title || "今天暂无后续计划",
       nextPlanTime: nextTask ? `${formatDateLabel(nextTask.date, true)} ${nextTask.time}` : "",
-      source: wearableSnapshot?.mode === "live" ? "HUAWEI Health" : "演示数据",
+      source: wearableSnapshot?.mode === "live" ? "HUAWEI Health" : "未连接",
       updatedAt: `${pad(now.getHours())}:${pad(now.getMinutes())}`
     }).catch((error) => {
       console.warn("Unable to update Android home widget.", error);
@@ -691,11 +618,13 @@
     els.basalBurnMetric.textContent = basalBurn.toLocaleString("zh-CN");
     els.exerciseBurnMetric.textContent = Math.round(activityBurn).toLocaleString("zh-CN");
     els.calorieNetMetric.textContent = `${net > 0 ? "+" : ""}${net.toLocaleString("zh-CN")}`;
-    els.calorieBalanceStatus.textContent = net > 300
-      ? "当前摄入高于消耗"
-      : net < -300
-        ? "当前消耗高于摄入"
-        : "当前摄入与消耗接近平衡";
+    els.calorieBalanceStatus.textContent = !state.healthProfileConfigured
+      ? "记录运动身体数据后计算基础消耗"
+      : net > 300
+        ? "当前摄入高于消耗"
+        : net < -300
+          ? "当前消耗高于摄入"
+          : "当前摄入与消耗接近平衡";
     els.calorieEntryCount.textContent = `${entries.length} 条`;
 
     els.calorieLedger.innerHTML = entries.length
@@ -732,7 +661,7 @@
     }
 
     els.foodAnalysisState.hidden = false;
-    els.foodEstimateMode.textContent = currentFoodEstimate.mode === "live" ? "图片识别" : "演示估算";
+    els.foodEstimateMode.textContent = "图片识别";
     els.foodEstimateTotal.textContent = window.RhythmNutritionEstimator.totalCalories(currentFoodEstimate.items);
     els.foodEstimateList.innerHTML = currentFoodEstimate.items.map((item, index) => {
       const calories = Math.round((item.portionGrams * item.kcalPer100g) / 100);
@@ -800,6 +729,28 @@
     els.saveFoodEstimateButton.disabled = true;
     renderCalorieSummary();
     showToast(`已记录 ${entries.length} 项食物，共 ${window.RhythmNutritionEstimator.totalCalories(currentFoodEstimate.items)} kcal`);
+  }
+
+  function saveManualFood(formData) {
+    const title = String(formData.get("title") || "").trim();
+    const portionGrams = clampNumber(formData.get("portionGrams"), 1, 2000, 0);
+    const kcalPer100g = clampNumber(formData.get("kcalPer100g"), 1, 1000, 0);
+    const now = new Date();
+    const calories = Math.round(portionGrams * kcalPer100g / 100);
+
+    state.calorieLedger.foods.push({
+      id: makeId(),
+      date: todayKey(),
+      time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      title,
+      portionGrams,
+      calories,
+      source: "manual"
+    });
+    saveState();
+    els.manualFoodForm.reset();
+    renderCalorieSummary();
+    showToast(`已记录 ${title}，约 ${calories} kcal`);
   }
 
   function estimateExerciseBurn(formData) {
@@ -886,6 +837,7 @@
       method: pendingBurnEstimate.method
     });
     state.healthProfile = pendingBurnEstimate.profile;
+    state.healthProfileConfigured = true;
     saveState();
     els.saveBurnEstimateButton.disabled = true;
     renderCalorieSummary();
@@ -909,7 +861,7 @@
     els.burnCalculatorForm.elements.height.value = profile.height;
     els.burnCalculatorForm.elements.weight.value = profile.weight;
     els.burnCalculatorForm.elements.restingHeartRate.value = wearableSnapshot?.heartRate?.resting || profile.restingHeartRate;
-    els.burnCalculatorForm.elements.heartRate.value = wearableSnapshot?.workouts?.[0]?.averageHeartRate || 132;
+    els.burnCalculatorForm.elements.heartRate.value = wearableSnapshot?.workouts?.[0]?.averageHeartRate || "";
   }
 
   function setInsightsPane(target) {
@@ -926,6 +878,8 @@
 
   function renderStreak() {
     const monday = startOfWeek();
+    const weekTasks = weeklyTasks();
+    els.profileWeekDone.textContent = String(weekTasks.filter((task) => task.done).length);
     els.streakWeek.innerHTML = Array.from({ length: 7 }, (_, index) => {
       const key = offsetDate(monday, index);
       const tasks = state.tasks.filter((task) => task.date === key);
@@ -941,14 +895,16 @@
   }
 
   function renderReminderState() {
-    const permission = "Notification" in window ? Notification.permission : "unsupported";
+    const notifications = window.RhythmNotifications;
+    const permission = notifications?.getCachedPermission() || "unsupported";
+    const isNative = Boolean(notifications?.isNativeAvailable());
     const enabled = state.remindersEnabled && permission === "granted";
     els.notificationButton.classList.toggle("is-enabled", enabled);
     els.reminderToggle.classList.toggle("is-on", enabled);
     els.reminderStatus.textContent = permission === "denied"
-      ? "已被浏览器阻止"
+      ? `已被${isNative ? "系统" : "浏览器"}阻止`
       : enabled
-        ? "已开启，到时发送系统通知"
+        ? `已开启${isNative ? "原生" : "浏览器"}通知`
         : "尚未开启";
     els.notificationButton.setAttribute("aria-label", enabled ? "提醒已开启" : "开启提醒");
   }
@@ -1000,6 +956,7 @@
     task.done = !task.done;
     saveState();
     renderAll();
+    scheduleNextReminder();
     showToast(task.done ? `已完成：${task.title}` : `已恢复：${task.title}`);
   }
 
@@ -1239,38 +1196,47 @@
   }
 
   async function requestReminders() {
-    if (!("Notification" in window)) {
-      showToast("当前浏览器不支持系统提醒", "circle-alert");
+    const notifications = window.RhythmNotifications;
+    if (!notifications) {
+      showToast("提醒模块加载失败", "circle-alert");
       return;
     }
 
-    if (Notification.permission === "denied") {
-      showToast("请在浏览器设置中允许通知", "circle-alert");
-      renderReminderState();
-      return;
-    }
-
-    const permission = Notification.permission === "granted"
-      ? "granted"
-      : await Notification.requestPermission();
+    const permission = await notifications.requestPermission();
     state.remindersEnabled = permission === "granted";
     saveState();
     renderReminderState();
-    if (state.remindersEnabled) {
-      scheduleNextReminder();
-      showToast("计划提醒已开启", "bell-ring");
+
+    if (!state.remindersEnabled) {
+      const target = notifications.isNativeAvailable() ? "系统设置" : "浏览器设置";
+      showToast(`请在${target}中允许通知`, "circle-alert");
+      await scheduleNextReminder();
+      return;
+    }
+
+    try {
+      const result = await scheduleNextReminder();
+      const count = Number(result?.scheduled || 0);
+      showToast(count ? `提醒已开启，已安排 ${count} 项` : "提醒已开启", "bell-ring");
+    } catch (error) {
+      console.warn("Unable to schedule reminders.", error);
+      showToast("提醒已授权，但计划调度失败", "circle-alert");
+      renderReminderState();
     }
   }
 
-  function toggleReminders() {
-    if (!("Notification" in window) || !state.remindersEnabled || Notification.permission !== "granted") {
-      requestReminders();
+  async function toggleReminders() {
+    const notifications = window.RhythmNotifications;
+    const permission = notifications?.getCachedPermission();
+    if (!state.remindersEnabled || permission !== "granted") {
+      await requestReminders();
       return;
     }
     state.remindersEnabled = false;
     saveState();
     renderReminderState();
     clearTimeout(reminderTimer);
+    await scheduleNextReminder();
     showToast("计划提醒已关闭", "bell-off");
   }
 
@@ -1315,6 +1281,7 @@
   }
 
   function checkDueReminders() {
+    if (window.RhythmNotifications?.isNativeAvailable()) return;
     if (!state.remindersEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
     const now = Date.now();
     const sent = notifiedSet();
@@ -1337,8 +1304,12 @@
     }
   }
 
-  function scheduleNextReminder() {
+  async function scheduleNextReminder() {
     clearTimeout(reminderTimer);
+    const notifications = window.RhythmNotifications;
+    if (notifications?.isNativeAvailable()) {
+      return notifications.sync(state.tasks, state.remindersEnabled);
+    }
     if (!state.remindersEnabled) return;
     checkDueReminders();
     const now = Date.now();
@@ -1348,6 +1319,7 @@
     if (!next) return;
     const delay = Math.min(reminderTimestamp(next) - now, 24 * 60 * 60 * 1000);
     reminderTimer = window.setTimeout(scheduleNextReminder, Math.max(1000, delay));
+    return { native: false, scheduled: 1 };
   }
 
   async function shareSummary() {
@@ -1451,10 +1423,10 @@
     try {
       const status = await provider?.getStatus();
       if (!status?.available || !status.authorized) {
-        wearableSnapshot = provider?.demoSnapshot() || wearableSnapshot;
+        wearableSnapshot = provider?.emptySnapshot() || wearableSnapshot;
         renderInsights();
         renderCalorieSummary();
-        showToast("已刷新演示数据", "refresh-cw");
+        els.deviceDialog.showModal();
         return;
       }
 
@@ -1524,6 +1496,11 @@
     });
 
     els.saveFoodEstimateButton.addEventListener("click", saveFoodEstimate);
+    els.manualFoodForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!els.manualFoodForm.reportValidity()) return;
+      saveManualFood(new FormData(els.manualFoodForm));
+    });
 
     els.burnCalculatorForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -1613,20 +1590,14 @@
       if (action === "reset") els.confirmDialog.showModal();
     });
 
-    els.confirmResetButton.addEventListener("click", () => {
-      state = {
-        tasks: createDefaultTasks(),
-        remindersEnabled: state.remindersEnabled,
-        healthProfile: defaultHealthProfile(),
-        calorieLedger: emptyCalorieLedger()
-      };
+    els.confirmResetButton.addEventListener("click", async () => {
+      state.tasks = [];
       selectedDate = todayKey();
       localStorage.removeItem(NOTIFIED_KEY);
       saveState();
       renderAll();
-      hydrateBurnForm();
-      scheduleNextReminder();
-      showToast("示例数据已恢复");
+      await scheduleNextReminder();
+      showToast("全部计划已清除", "trash-2");
     });
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -1654,6 +1625,23 @@
     }
   }
 
+  async function initializeReminders() {
+    const notifications = window.RhythmNotifications;
+    if (!notifications) return;
+    try {
+      const permission = await notifications.checkPermission();
+      if (state.remindersEnabled && permission !== "granted") {
+        state.remindersEnabled = false;
+        saveState();
+      }
+      renderReminderState();
+      await scheduleNextReminder();
+    } catch (error) {
+      console.warn("Unable to initialize reminders.", error);
+      renderReminderState();
+    }
+  }
+
   function init() {
     els.greeting.textContent = getGreeting();
     saveState();
@@ -1662,7 +1650,7 @@
     renderAll();
     hydrateBurnForm();
     registerServiceWorker();
-    scheduleNextReminder();
+    initializeReminders();
     window.setInterval(checkDueReminders, 30 * 1000);
   }
 

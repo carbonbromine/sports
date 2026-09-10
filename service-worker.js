@@ -1,4 +1,4 @@
-const CACHE_NAME = "rhythm-health-v4";
+const CACHE_NAME = "rhythm-health-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./huawei-health.js",
   "./nutrition-estimator.js",
   "./home-widget.js",
+  "./local-notifications.js",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",
   "./vendor/lucide.min.js"
