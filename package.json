@@ -1,0 +1,21 @@
+{
+  "name": "rhythm-health-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobile health plan PWA packaged for Android with Capacitor.",
+  "scripts": {
+    "prepare:web": "node scripts/prepare-web.js",
+    "android:sync": "npm run prepare:web && cap sync android",
+    "build:apk": "bash ./build-apk.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.6.9",
+    "@capacitor/core": "7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
