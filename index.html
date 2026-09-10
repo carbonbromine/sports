@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f5f1" />
+    <meta name="description" content="律动 - 运动与饮食计划管理和提醒" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/app-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>律动 - 健康计划</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow" id="greeting">早上好</p>
+          <h1 id="pageTitle">今天，也要动起来</h1>
+        </div>
+        <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="开启提醒">
+          <i data-lucide="bell"></i>
+          <span class="notification-dot" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <main class="app-main">
+        <section class="view is-active" id="todayView" data-view="today" aria-labelledby="todayLabel">
+          <div class="date-strip" id="dateStrip" aria-label="选择日期"></div>
+
+          <article class="focus-card">
+            <div class="focus-content">
+              <div class="focus-topline">
+                <span class="focus-kicker">今日进度</span>
+                <span class="focus-count" id="focusCount">0/0</span>
+              </div>
+              <h2 id="focusTitle">完成今天的计划</h2>
+              <p id="focusSummary">身体会记住你的每一次坚持</p>
+              <div class="focus-progress" aria-label="今日计划完成度">
+                <span id="focusProgress"></span>
+              </div>
+            </div>
+            <img
+              class="focus-photo"
+              src="https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=Realistic%20editorial%20fitness%20photography%2C%20an%20athletic%20Asian%20woman%20in%20sage%20green%20sportswear%20stretching%20after%20a%20morning%20run%20in%20a%20bright%20modern%20city%20park%2C%20natural%20sunlight%2C%20fresh%20healthy%20mood%2C%20clean%20composition%2C%20premium%20mobile%20health%20app%20visual%2C%20subject%20on%20right%20side%2C%20no%20text&image_size=portrait_4_3"
+              alt="晨跑后进行拉伸的运动者"
+            />
+          </article>
+
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker" id="selectedDateLabel">今天</p>
+              <h2>计划时间线</h2>
+            </div>
+            <button class="text-button" id="viewAllButton" type="button">全部计划</button>
+          </div>
+
+          <div class="timeline" id="todayTimeline"></div>
+        </section>
+
+        <section class="view" id="plansView" data-view="plans" aria-labelledby="plansLabel">
+          <div class="page-intro">
+            <div>
+              <p class="section-kicker">计划管理</p>
+              <h2>我的计划</h2>
+              <p class="muted"><span id="planCount">0</span> 个待完成安排</p>
+            </div>
+            <button class="primary-button compact" id="openImportButton" type="button">
+              <i data-lucide="file-up"></i>
+              <span>导入</span>
+            </button>
+          </div>
+
+          <div class="segmented-control" id="planFilters" role="tablist" aria-label="计划类型">
+            <button class="is-active" type="button" data-filter="all" role="tab">全部</button>
+            <button type="button" data-filter="exercise" role="tab">运动</button>
+            <button type="button" data-filter="meal" role="tab">饮食</button>
+          </div>
+
+          <div class="plan-summary">
+            <div class="summary-ring" id="weeklyRing" aria-label="本周完成率">
+              <strong id="weeklyPercent">0%</strong>
+              <span>本周</span>
+            </div>
+            <div class="summary-copy">
+              <span class="status-pill"><i data-lucide="sparkles"></i> 节奏稳定</span>
+              <h3>保持自己的步调</h3>
+              <p id="weeklySummary">本周计划正在整理中</p>
+            </div>
+          </div>
+
+          <div class="plan-list" id="planList"></div>
+        </section>
+
+        <section class="view" id="insightsView" data-view="insights" aria-labelledby="insightsLabel">
+          <div class="page-intro insights-intro">
+            <div>
+              <p class="section-kicker">本周回顾</p>
+              <h2>身体数据</h2>
+              <p class="muted">9月 7日 - 9月 13日</p>
+            </div>
+            <button class="icon-button" type="button" aria-label="分享数据" data-action="share">
+              <i data-lucide="share-2"></i>
+            </button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card metric-card-dark">
+              <span class="metric-icon"><i data-lucide="flame"></i></span>
+              <p>活动消耗</p>
+              <strong id="calorieMetric">0</strong>
+              <span>千卡</span>
+            </article>
+            <article class="metric-card">
+              <span class="metric-icon coral"><i data-lucide="timer"></i></span>
+              <p>运动时长</p>
+              <strong id="durationMetric">0</strong>
+              <span>分钟</span>
+            </article>
+          </div>
+
+          <article class="chart-section">
+            <div class="chart-heading">
+              <div>
+                <p class="section-kicker">完成趋势</p>
+                <h3>近 7 天活跃度</h3>
+              </div>
+              <span class="trend-badge"><i data-lucide="trending-up"></i> 12%</span>
+            </div>
+            <div class="bar-chart" id="barChart" aria-label="近七天计划完成趋势"></div>
+          </article>
+
+          <article class="balance-section">
+            <div class="balance-visual">
+              <div class="balance-ring">
+                <strong id="balanceScore">86</strong>
+                <span>平衡分</span>
+              </div>
+            </div>
+            <div class="balance-copy">
+              <p class="section-kicker">健康平衡</p>
+              <h3>饮食与运动配合得不错</h3>
+              <p>蛋白质摄入稳定，再增加一次低强度有氧会更理想。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="profileView" data-view="profile" aria-labelledby="profileLabel">
+          <div class="profile-hero">
+            <div class="avatar">林</div>
+            <div>
+              <p class="section-kicker">个人中心</p>
+              <h2>林小满</h2>
+              <p class="muted">规律生活第 46 天</p>
+            </div>
+            <button class="icon-button" type="button" aria-label="编辑个人资料">
+              <i data-lucide="pencil"></i>
+            </button>
+          </div>
+
+          <article class="streak-panel">
+            <div>
+              <span class="streak-icon"><i data-lucide="zap"></i></span>
+              <p>连续达标</p>
+              <strong>12 <small>天</small></strong>
+            </div>
+            <div class="streak-week" id="streakWeek"></div>
+          </article>
+
+          <div class="settings-group">
+            <h3>偏好设置</h3>
+            <button class="settings-row" id="reminderSettingsButton" type="button">
+              <span class="settings-icon green"><i data-lucide="bell-ring"></i></span>
+              <span class="settings-copy">
+                <strong>计划提醒</strong>
+                <small id="reminderStatus">尚未开启</small>
+              </span>
+              <span class="toggle" id="reminderToggle" aria-hidden="true"><span></span></span>
+            </button>
+            <button class="settings-row" type="button" data-action="export">
+              <span class="settings-icon orange"><i data-lucide="file-down"></i></span>
+              <span class="settings-copy">
+                <strong>导出我的计划</strong>
+                <small>JSON 格式，可随时备份</small>
+              </span>
+              <i class="row-chevron" data-lucide="chevron-right"></i>
+            </button>
+            <button class="settings-row" type="button" data-action="install">
+              <span class="settings-icon blue"><i data-lucide="smartphone"></i></span>
+              <span class="settings-copy">
+                <strong>安装到手机</strong>
+                <small>添加到主屏幕，使用更方便</small>
+              </span>
+              <i class="row-chevron" data-lucide="chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="settings-group">
+            <h3>数据</h3>
+            <button class="settings-row danger-row" type="button" data-action="reset">
+              <span class="settings-icon red"><i data-lucide="rotate-ccw"></i></span>
+              <span class="settings-copy">
+                <strong>恢复示例数据</strong>
+                <small>清除当前记录并重新开始</small>
+              </span>
+              <i class="row-chevron" data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主导航">
+        <button class="nav-item is-active" type="button" data-target="today" id="todayLabel">
+          <i data-lucide="house"></i>
+          <span>今天</span>
+        </button>
+        <button class="nav-item" type="button" data-target="plans" id="plansLabel">
+          <i data-lucide="calendar-days"></i>
+          <span>计划</span>
+        </button>
+        <button class="add-button" id="openAddButton" type="button" aria-label="添加计划">
+          <i data-lucide="plus"></i>
+        </button>
+        <button class="nav-item" type="button" data-target="insights" id="insightsLabel">
+          <i data-lucide="chart-no-axes-column-increasing"></i>
+          <span>数据</span>
+        </button>
+        <button class="nav-item" type="button" data-target="profile" id="profileLabel">
+          <i data-lucide="user-round"></i>
+          <span>我的</span>
+        </button>
+      </nav>
+    </div>
+
+    <dialog class="sheet-dialog" id="addDialog">
+      <form class="sheet" id="addForm" method="dialog">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <p class="section-kicker">新建安排</p>
+            <h2>添加计划</h2>
+          </div>
+          <button class="icon-button sheet-close" type="button" data-close="addDialog" aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <label class="field-label" for="taskTitle">计划名称</label>
+        <input class="field-input" id="taskTitle" name="title" type="text" placeholder="例如：30 分钟晨跑" required maxlength="40" />
+
+        <span class="field-label">计划类型</span>
+        <div class="type-selector">
+          <label>
+            <input type="radio" name="type" value="exercise" checked />
+            <span><i data-lucide="dumbbell"></i> 运动</span>
+          </label>
+          <label>
+            <input type="radio" name="type" value="meal" />
+            <span><i data-lucide="utensils"></i> 饮食</span>
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label>
+            <span class="field-label">日期</span>
+            <input class="field-input" id="taskDate" name="date" type="date" required />
+          </label>
+          <label>
+            <span class="field-label">时间</span>
+            <input class="field-input" name="time" type="time" required />
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label>
+            <span class="field-label">时长（分钟）</span>
+            <input class="field-input" name="duration" type="number" min="0" max="360" value="30" />
+          </label>
+          <label>
+            <span class="field-label">提前提醒</span>
+            <select class="field-input" name="reminder">
+              <option value="0">准时</option>
+              <option value="5">提前 5 分钟</option>
+              <option value="15" selected>提前 15 分钟</option>
+              <option value="30">提前 30 分钟</option>
+              <option value="60">提前 1 小时</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field-label" for="taskNote">备注</label>
+        <textarea class="field-input field-textarea" id="taskNote" name="note" placeholder="补充动作、份量或注意事项" maxlength="100"></textarea>
+
+        <button class="primary-button full-width" type="submit">
+          <i data-lucide="plus"></i>
+          保存计划
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="sheet-dialog" id="importDialog">
+      <form class="sheet import-sheet" id="importForm" method="dialog">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <p class="section-kicker">批量录入</p>
+            <h2>导入计划表</h2>
+          </div>
+          <button class="icon-button sheet-close" type="button" data-close="importDialog" aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <label class="drop-zone" id="dropZone" for="planFile">
+          <input id="planFile" name="file" type="file" accept=".csv,.json,text/csv,application/json" />
+          <span class="drop-icon"><i data-lucide="cloud-upload"></i></span>
+          <strong>选择 CSV 或 JSON 文件</strong>
+          <small>也可以将文件拖到这里</small>
+          <span class="file-name" id="selectedFileName">单个文件不超过 2 MB</span>
+        </label>
+
+        <div class="import-guide">
+          <div class="guide-icon"><i data-lucide="table-2"></i></div>
+          <div>
+            <strong>CSV 表头格式</strong>
+            <code>日期, 时间, 类型, 名称, 时长, 提醒</code>
+            <button class="inline-link" id="downloadTemplateButton" type="button">下载示例模板</button>
+          </div>
+        </div>
+
+        <div class="import-error" id="importError" role="alert"></div>
+        <button class="primary-button full-width" id="importSubmitButton" type="submit" disabled>
+          <i data-lucide="file-check-2"></i>
+          导入计划
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <form method="dialog">
+        <span class="confirm-icon"><i data-lucide="rotate-ccw"></i></span>
+        <h2>恢复示例数据？</h2>
+        <p>当前计划和完成记录将被清除，此操作无法撤销。</p>
+        <div class="confirm-actions">
+          <button class="secondary-button" value="cancel">取消</button>
+          <button class="danger-button" id="confirmResetButton" value="confirm">确认恢复</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <i data-lucide="circle-check"></i>
+      <span id="toastMessage"></span>
+    </div>
+
+    <script src="./vendor/lucide.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

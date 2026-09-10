@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">律动健康计划</title>
+  <rect width="512" height="512" rx="112" fill="#164c39"/>
+  <circle cx="256" cy="256" r="164" fill="#c8e25a"/>
+  <path d="M143 260h67l31-72 45 141 34-87h49" fill="none" stroke="#17211b" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
